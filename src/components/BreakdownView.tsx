@@ -67,6 +67,11 @@ export function BreakdownView({ oldResult, newResult, oldLabel, newLabel }: Brea
       newValue: sum(newResult, (y) => y.maintenance),
     },
     {
+      label: 'Ersatzbeschaffung bei erreichter Lebensdauer',
+      oldValue: sum(oldResult, (y) => y.replacement),
+      newValue: sum(newResult, (y) => y.replacement),
+    },
+    {
       label: 'THG-Quoten-Erlös',
       oldValue: -sum(oldResult, (y) => y.thgIncome),
       newValue: -sum(newResult, (y) => y.thgIncome),

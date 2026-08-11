@@ -50,6 +50,7 @@ export function ResultsView({
 
   const worthIt = savingsAtHorizon > 0
   const verdictUncertain = savingsLow < 0 !== savingsHigh < 0 // Toleranzband umfasst die Null
+  const oldEndOfLife = result.old.endOfLifeYear
 
   return (
     <div className="flex flex-col gap-4">
@@ -84,6 +85,15 @@ export function ResultsView({
             ? `"${newLabel}" lohnt sich: über ${horizon} Jahre ca. ${eur.format(savingsLow)} bis ${eur.format(savingsHigh)} günstiger als "${oldLabel}" behalten (±${uncertaintyPercent}% Toleranz).`
             : `"${newLabel}" lohnt sich (noch) nicht: über ${horizon} Jahre ca. ${eur.format(Math.abs(savingsHigh))} bis ${eur.format(Math.abs(savingsLow))} teurer als "${oldLabel}" behalten (±${uncertaintyPercent}% Toleranz).`}
       </div>
+
+      {oldEndOfLife != null && (
+        <p className="rounded-md bg-slate-100 p-2.5 text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+          ⚠️ Das Bestandsfahrzeug erreicht in <strong>Jahr {oldEndOfLife}</strong> seine erwartete
+          Gesamt-Laufleistung. Ein Auto fährt nicht unendlich – im „Behalten"-Pfad ist deshalb ab
+          dann eine gleichwertige gebrauchte Ersatzbeschaffung eingerechnet (siehe Aufstellung
+          unten).
+        </p>
+      )}
 
       <div className="h-80 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
         <ResponsiveContainer width="100%" height="100%">

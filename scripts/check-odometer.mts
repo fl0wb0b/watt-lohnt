@@ -18,7 +18,7 @@ const OLD: OldCarConfig = {
   leaseMonthlyRate: 0, leaseSpecialPayment: 0, leaseTermYears: 0, insurancePerYear: 700,
   taxPerYear: 130, taxExemptionYears: 0, postExemptionTaxPerYear: 130, thgQuotePerYear: 0,
   wallboxCost: 0, maintenancePerYear: 650, consumptionPer100km: 6.5,
-  annualDepreciationPercent: 12, currentMarketValue: 15000,
+  annualDepreciationPercent: 12, currentMarketValue: 15000, expectedLifetimeKm: 300000, replacementCost: 12000,
 }
 
 const TESLA: CarConfig = { id: 'n', label: 'Tesla', ...getPreset('tesla-model-y').config }

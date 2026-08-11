@@ -25,7 +25,7 @@ const OLD: OldCarConfig = {
   leaseMonthlyRate: 0, leaseSpecialPayment: 0, leaseTermYears: 0, insurancePerYear: 700,
   taxPerYear: 130, taxExemptionYears: 0, postExemptionTaxPerYear: 130, thgQuotePerYear: 0,
   wallboxCost: 0, maintenancePerYear: 650, consumptionPer100km: 6.5,
-  annualDepreciationPercent: 12, currentMarketValue: 15000,
+  annualDepreciationPercent: 12, currentMarketValue: 15000, expectedLifetimeKm: 300000, replacementCost: 12000,
 }
 
 const TESLA: CarConfig = { id: 'n', label: 'Tesla', ...getPreset('tesla-model-y').config }
@@ -83,6 +83,22 @@ console.log('\n=== Run C) Diskontierung: bewusste Abweichung Tabelle (nominal) v
   const cmp0 = compareCars(OLD, TESLA, G, true)
   const cmp5 = compareCars(OLD, TESLA, g5, true)
   console.log(`Vergleich nominal: EV-Vorteil ${eur(cmp0.savingsAtHorizon)} | diskontiert 5%: ${eur(cmp5.savingsAtHorizon)} (gleiche Richtung? ${Math.sign(cmp0.savingsAtHorizon) === Math.sign(cmp5.savingsAtHorizon) ? 'JA' : 'NEIN – prüfen!'})`)
+}
+
+console.log('\n=== Run E) Lebensdauer: 350.000-km-Diesel darf nicht ewig weiterfahren ===')
+{
+  for (const [lbl, odo, life] of [
+    ['120k km, Lebensdauer 300k (stirbt in J13 → außerhalb 8J)', 120000, 300000],
+    ['250k km, Lebensdauer 300k (stirbt in J4)', 250000, 300000],
+    ['350k km, Lebensdauer 300k (schon drüber → Ersatz J1)', 350000, 300000],
+  ] as const) {
+    const old = { ...OLD, odometerKm: odo, expectedLifetimeKm: life }
+    const cmp = compareCars(old, TESLA, G, true)
+    const repl = cmp.old.years.reduce((a, y) => a + y.replacement, 0)
+    console.log(
+      `${lbl.padEnd(52)} EoL-Jahr: ${String(cmp.old.endOfLifeYear ?? '—').padStart(2)} | Ersatzkosten: ${eur(repl).padStart(9)} | Nettokosten Behalten: ${eur(cmp.oldCumulativeNet.at(-1)!)}`,
+    )
+  }
 }
 
 console.log('\n=== Run D) Energiepreis-Sensitivität (0% Solar): wann kippt der EV-Vorteil? ===')
