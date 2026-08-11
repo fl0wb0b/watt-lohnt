@@ -22,9 +22,16 @@ interface ResultsViewProps {
   oldLabel: string
   newLabel: string
   discountRatePercent: number
+  uncertaintyPercent: number
 }
 
-export function ResultsView({ result, oldLabel, newLabel, discountRatePercent }: ResultsViewProps) {
+export function ResultsView({
+  result,
+  oldLabel,
+  newLabel,
+  discountRatePercent,
+  uncertaintyPercent,
+}: ResultsViewProps) {
   const { breakEvenYear, savingsAtHorizon, oldCumulativeNet, newCumulativeNet } = result
   const horizon = oldCumulativeNet.length - 1
 
@@ -34,7 +41,15 @@ export function ResultsView({ result, oldLabel, newLabel, discountRatePercent }:
     [newLabel]: Math.round(newCumulativeNet[y]),
   }))
 
+  // Unschärfe: Differenz beider Pfade ± Toleranz auf die jeweiligen Gesamtkosten.
+  const tol = Math.max(0, uncertaintyPercent) / 100
+  const spread =
+    (Math.abs(oldCumulativeNet[horizon]) + Math.abs(newCumulativeNet[horizon])) * tol * 0.5
+  const savingsLow = savingsAtHorizon - spread
+  const savingsHigh = savingsAtHorizon + spread
+
   const worthIt = savingsAtHorizon > 0
+  const verdictUncertain = savingsLow < 0 !== savingsHigh < 0 // Toleranzband umfasst die Null
 
   return (
     <div className="flex flex-col gap-4">
@@ -56,14 +71,18 @@ export function ResultsView({ result, oldLabel, newLabel, discountRatePercent }:
 
       <div
         className={`rounded-xl border p-4 text-sm font-medium ${
-          worthIt
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
-            : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300'
+          verdictUncertain
+            ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300'
+            : worthIt
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
+              : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300'
         }`}
       >
-        {worthIt
-          ? `"${newLabel}" lohnt sich: über ${horizon} Jahre ca. ${eur.format(savingsAtHorizon)} günstiger als "${oldLabel}" behalten.`
-          : `"${newLabel}" lohnt sich (noch) nicht: über ${horizon} Jahre ca. ${eur.format(Math.abs(savingsAtHorizon))} teurer als "${oldLabel}" behalten.`}
+        {verdictUncertain
+          ? `Zu knapp für ein klares Urteil: über ${horizon} Jahre liegt der Unterschied zwischen ${eur.format(savingsLow)} und ${eur.format(savingsHigh)} (±${uncertaintyPercent}% Unschärfe auf die Eingaben). Beide Wege sind wirtschaftlich etwa gleichwertig.`
+          : worthIt
+            ? `"${newLabel}" lohnt sich: über ${horizon} Jahre ca. ${eur.format(savingsLow)} bis ${eur.format(savingsHigh)} günstiger als "${oldLabel}" behalten (±${uncertaintyPercent}% Toleranz).`
+            : `"${newLabel}" lohnt sich (noch) nicht: über ${horizon} Jahre ca. ${eur.format(Math.abs(savingsHigh))} bis ${eur.format(Math.abs(savingsLow))} teurer als "${oldLabel}" behalten (±${uncertaintyPercent}% Toleranz).`}
       </div>
 
       <div className="h-80 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">

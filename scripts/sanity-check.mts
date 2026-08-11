@@ -1,7 +1,7 @@
 import { amortizationSchedule, compareCars, computeCarResult } from '../src/lib/calc'
-import { estimatePvShareForEv, presenceFactor } from '../src/lib/vrm'
+import { simulateSolarCharging } from '../src/lib/simulate'
 import { getPreset } from '../src/lib/presets'
-import type { GeneralParams, OldCarConfig, PresenceProfile } from '../src/lib/types'
+import type { ChargingSimConfig, GeneralParams, OldCarConfig, VrmPvData } from '../src/lib/types'
 
 function eur(n: number) {
   return n.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €'
@@ -18,10 +18,12 @@ const BASE_GENERAL: GeneralParams = {
   fuelCostInflationExtraPercent: 1,
   chargingLossPercent: 10,
   discountRatePercent: 0,
+  uncertaintyPercent: 10,
 }
 
 const BASE_OLD_CAR: OldCarConfig = {
   id: 'old', label: 'Alter Diesel', type: 'ice', fuelType: 'diesel', annualKm: 20000,
+  ageYears: 8, odometerKm: 120000,
   financingType: 'cash', purchasePrice: 0, subsidy: 0, downPayment: 0, loanInterestRatePercent: 0,
   loanTermYears: 0, balloonPercent: 0, leaseMonthlyRate: 0, leaseSpecialPayment: 0, leaseTermYears: 0,
   insurancePerYear: 700, taxPerYear: 130, taxExemptionYears: 0, postExemptionTaxPerYear: 130,
@@ -42,26 +44,30 @@ const BASE_OLD_CAR: OldCarConfig = {
   )
 }
 
-// --- 2) Presence factor sanity
+// --- 2+3) Charging simulation sanity: battery + charge time should move the solar share sensibly.
 {
-  const weekendOnly: PresenceProfile = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: true, sun: true }
-  const always: PresenceProfile = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true }
-  console.log('\n--- Presence factor ---')
-  console.log('weekend only (expect ~0.286):', presenceFactor(weekendOnly).toFixed(3))
-  console.log('always home (expect 1):', presenceFactor(always).toFixed(3))
-}
-
-// --- 3) PV share for EV: big PV surplus, small EV need, always home -> should approach 100%
-{
-  const pv = { annualYieldKwh: 9000, selfConsumptionShare: 0.3, annualHouseholdConsumptionKwh: 4500, source: 'manual' as const }
-  const always: PresenceProfile = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true }
-  const weekend: PresenceProfile = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: true, sun: true }
-  const officeOnly: PresenceProfile = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
+  const pv: VrmPvData = {
+    annualYieldKwh: 24301, selfConsumptionShare: 0.38, annualHouseholdConsumptionKwh: 10329, source: 'manual',
+  }
   const evNeed = (14000 / 100) * 14.5 // Tesla Model Y-ish
-  console.log('\n--- PV share for EV (evNeed=%d kWh) ---', evNeed.toFixed(0))
-  console.log('always home:', (estimatePvShareForEv(pv, evNeed, always) * 100).toFixed(0) + '%')
-  console.log('weekend only:', (estimatePvShareForEv(pv, evNeed, weekend) * 100).toFixed(0) + '%')
-  console.log('office only (never home daytime):', (estimatePvShareForEv(pv, evNeed, officeOnly) * 100).toFixed(0) + '%')
+  const mk = (o: Partial<ChargingSimConfig>): ChargingSimConfig => ({
+    earliestChargeHour: 18, batteryCapacityKwh: 0, maxChargePowerKw: 11, ...o,
+  })
+  console.log('\n--- Charging simulation (Kevins Anlage, evNeed=%d kWh) ---', evNeed.toFixed(0))
+  for (const [label, cfg] of [
+    ['abends 18h, kein Speicher', mk({ earliestChargeHour: 18, batteryCapacityKwh: 0 })],
+    ['abends 18h, 10 kWh Speicher', mk({ earliestChargeHour: 18, batteryCapacityKwh: 10 })],
+    ['ab 16h, 10 kWh Speicher', mk({ earliestChargeHour: 16, batteryCapacityKwh: 10 })],
+    ['ab 11h (Homeoffice), kein Speicher', mk({ earliestChargeHour: 11, batteryCapacityKwh: 0 })],
+    ['ab 16h, 30 kWh Speicher', mk({ earliestChargeHour: 16, batteryCapacityKwh: 30 })],
+  ] as [string, ChargingSimConfig][]) {
+    const r = simulateSolarCharging(pv, evNeed, 10, cfg)
+    console.log(
+      label.padEnd(38),
+      'Solaranteil', (r.solarShare * 100).toFixed(0).padStart(3) + '%',
+      '| PV', Math.round(r.fromPvDirectKwh), 'Batt', Math.round(r.fromBatteryKwh), 'Netz', Math.round(r.fromGridKwh),
+    )
+  }
 }
 
 // --- 4) Full comparison: realistic household, high annual mileage -> EV should win comfortably
