@@ -108,11 +108,19 @@ function energyCostForYear(car: CarConfig, general: GeneralParams, year: number)
  * @param tradeInValue Erlös aus dem Verkauf des Altfahrzeugs, der die Finanzierung mindert (nur beim Neuwagen relevant).
  * @param depreciationBasis Wert, auf dem die Restwert-Abschreibung basiert (Kaufpreis bei Neuwagen, aktueller Marktwert bei Bestandsfahrzeug). Bei Leasing wird kein Restwert gutgeschrieben.
  */
+export interface LifetimeConfig {
+  /** Gesamt-Laufleistung, ab der ein Ersatz fällig wird. */
+  lifetimeKm: number
+  /** Kosten der gebrauchten Ersatzbeschaffung (startet mit halber Lebensdauer, Alter 6 Jahre). */
+  replacementCost: number
+}
+
 export function computeCarResult(
   car: CarConfig,
   general: GeneralParams,
   tradeInValue = 0,
   depreciationBasis = car.purchasePrice,
+  lifetime?: LifetimeConfig,
 ): CarResult {
   const inflation = general.costInflationPercent / 100
   const horizon = general.horizonYears
@@ -186,25 +194,49 @@ export function computeCarResult(
   const cumulative: number[] = [upfrontCash]
   const outstandingBalance: number[] = [0]
 
+  // Verschleiß-/Restwertzustand des aktuell gehaltenen Fahrzeugs. Erreicht es seine
+  // Lebensdauer, wird eine gebrauchte Ersatzbeschaffung fällig (Neustart des Zustands) –
+  // ein Auto fährt nicht unendlich weiter.
+  const isLease = car.financingType === 'lease'
+  let curAge = car.ageYears
+  let curKm = car.odometerKm
+  let resaleBasis = isLease ? 0 : effectiveDepreciationBasis
+  let resaleBoughtYear = 0
+  let endOfLifeYear: number | null = null
+  const resaleByYear: number[] = [
+    isLease ? 0 : residualValue(resaleBasis, car.annualDepreciationPercent, 0),
+  ]
+
   for (let y = 1; y <= horizon; y++) {
     const inflationFactor = (1 + inflation) ** (y - 1)
+
+    let replacement = 0
+    if (lifetime && curKm >= lifetime.lifetimeKm) {
+      // Fahrzeug ist am Ende: gleichwertiger Gebrauchter (halbe Lebensdauer, ~6 Jahre alt).
+      replacement = lifetime.replacementCost * inflationFactor
+      curKm = lifetime.lifetimeKm / 2
+      curAge = 6
+      resaleBasis = replacement
+      resaleBoughtYear = y - 1
+      endOfLifeYear ??= y
+    }
+
     const insurance = car.insurancePerYear * inflationFactor
     const taxExempt = car.type === 'bev' && y <= car.taxExemptionYears
     const tax = (taxExempt ? car.taxPerYear : car.postExemptionTaxPerYear) * inflationFactor
     // Reparaturen steigen mit Alter UND Laufleistung (Verschleiß):
     //  - ab ~6 Jahren Fahrzeugalter rund +4% je weiterem Altersjahr,
     //  - ab 100.000 km rund +5% je weiteren 25.000 km auf dem Tacho.
-    const ageInYear = car.ageYears + (y - 1)
-    const kmInYear = car.odometerKm + car.annualKm * (y - 1)
-    const ageRepairFactor = 1 + 0.04 * Math.max(0, ageInYear - 6)
-    const mileageRepairFactor = 1 + 0.05 * Math.max(0, (kmInYear - 100_000) / 25_000)
+    const ageRepairFactor = 1 + 0.04 * Math.max(0, curAge - 6)
+    const mileageRepairFactor = 1 + 0.05 * Math.max(0, (curKm - 100_000) / 25_000)
     const maintenance =
       car.maintenancePerYear * inflationFactor * ageRepairFactor * mileageRepairFactor
     const energy = energyCostForYear(car, general, y)
     const financingCash = financingCashPerYear[y - 1] ?? 0
     const financingInterest = financingInterestPerYear[y - 1] ?? 0
     const thgIncome = car.type === 'bev' ? car.thgQuotePerYear : 0
-    const ongoingTotal = insurance + tax + maintenance + energy + financingCash - thgIncome
+    const ongoingTotal =
+      insurance + tax + maintenance + energy + financingCash + replacement - thgIncome
 
     years.push({
       year: y,
@@ -215,18 +247,21 @@ export function computeCarResult(
       financingCash,
       financingInterest,
       thgIncome,
+      replacement,
       ongoingTotal,
     })
     const df = discountFactor(general.discountRatePercent, y)
     cumulative.push(cumulative[cumulative.length - 1] + ongoingTotal * df)
     outstandingBalance.push(outstandingBalancePerYear[y - 1] ?? 0)
+    resaleByYear.push(
+      isLease ? 0 : residualValue(resaleBasis, car.annualDepreciationPercent, y - resaleBoughtYear),
+    )
+
+    curAge += 1
+    curKm += car.annualKm
   }
 
-  const residualValueAtHorizon = residualValue(
-    effectiveDepreciationBasis,
-    car.annualDepreciationPercent,
-    horizon,
-  )
+  const residualValueAtHorizon = resaleByYear[resaleByYear.length - 1]
   const totalCostAtHorizon =
     cumulative[cumulative.length - 1] +
     outstandingBalance[outstandingBalance.length - 1] * discountFactor(general.discountRatePercent, horizon) -
@@ -238,24 +273,18 @@ export function computeCarResult(
     years,
     cumulative,
     outstandingBalance,
+    resaleByYear,
+    endOfLifeYear,
     residualValueAtHorizon,
     totalCostAtHorizon,
   }
 }
 
 /** Nettoposition je Jahr: (ggf. abgezinste) Kassenausgänge + offene Finanzierungsschuld − erzielbarer Restwert, wenn in genau diesem Jahr verkauft/abgelöst würde. */
-function netCumulativeByYear(
-  result: CarResult,
-  depreciationBasis: number,
-  general: GeneralParams,
-): number[] {
-  const isLease = result.car.financingType === 'lease'
+function netCumulativeByYear(result: CarResult, general: GeneralParams): number[] {
   return result.cumulative.map((c, y) => {
-    const resale = isLease
-      ? 0
-      : residualValue(depreciationBasis, result.car.annualDepreciationPercent, y)
     const df = discountFactor(general.discountRatePercent, y)
-    return c + result.outstandingBalance[y] * df - resale * df
+    return c + result.outstandingBalance[y] * df - result.resaleByYear[y] * df
   })
 }
 
@@ -266,20 +295,22 @@ export function compareCars(
   /** Verkaufserlös des Altfahrzeugs als Anzahlung/Sondertilgung für den Neuwagen verwenden? */
   useTradeIn = true,
 ): ComparisonResult {
-  // Pfad "Behalten": kein Kauf, kein Verkaufserlös vereinnahmt, Restwert bemisst sich am aktuellen Marktwert.
+  // Pfad "Behalten": kein Kauf, kein Verkaufserlös vereinnahmt, Restwert bemisst sich am aktuellen
+  // Marktwert – und die Lebensdauer wird ehrlich modelliert (Ersatzkauf statt ewigem Weiterfahren).
   const oldPath = computeCarResult(
     { ...oldCar, financingType: 'cash', purchasePrice: 0, subsidy: 0 },
     general,
     0,
     oldCar.currentMarketValue,
+    { lifetimeKm: oldCar.expectedLifetimeKm, replacementCost: oldCar.replacementCost },
   )
 
   // Pfad "Wechseln": Altfahrzeug wird jetzt verkauft, Erlös mindert optional die Finanzierung des Neuwagens.
   const tradeInValue = useTradeIn ? oldCar.currentMarketValue : 0
   const newPath = computeCarResult(newCar, general, tradeInValue)
 
-  const oldCumulativeNet = netCumulativeByYear(oldPath, oldCar.currentMarketValue, general)
-  const newCumulativeNet = netCumulativeByYear(newPath, newCar.purchasePrice, general)
+  const oldCumulativeNet = netCumulativeByYear(oldPath, general)
+  const newCumulativeNet = netCumulativeByYear(newPath, general)
 
   let breakEvenYear: number | null = null
   for (let y = 1; y <= general.horizonYears; y++) {

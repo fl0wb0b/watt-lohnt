@@ -28,7 +28,7 @@ const BASE_OLD_CAR: OldCarConfig = {
   loanTermYears: 0, balloonPercent: 0, leaseMonthlyRate: 0, leaseSpecialPayment: 0, leaseTermYears: 0,
   insurancePerYear: 700, taxPerYear: 130, taxExemptionYears: 0, postExemptionTaxPerYear: 130,
   thgQuotePerYear: 0, wallboxCost: 0, maintenancePerYear: 650, consumptionPer100km: 6.5,
-  annualDepreciationPercent: 12, currentMarketValue: 12000,
+  annualDepreciationPercent: 12, currentMarketValue: 12000, expectedLifetimeKm: 300000, replacementCost: 12000,
 }
 
 // --- 1) Amortization sanity: standard loan should reach 0 balance, balloon should reach balloonAmount.

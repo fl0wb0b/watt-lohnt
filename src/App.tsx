@@ -74,6 +74,8 @@ const initialOldCar: OldCarConfig = {
   consumptionPer100km: 6.5,
   annualDepreciationPercent: 12,
   currentMarketValue: 15000,
+  expectedLifetimeKm: 300000,
+  replacementCost: 15000,
 }
 
 function App() {
@@ -186,7 +188,7 @@ function App() {
           subtitle="Dein aktuelles Fahrzeug: Kosten, wenn du es behältst"
           right={<Car className="size-5 text-amber-500" />}
         >
-          <div className="mb-3">
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <NumberField
               label="Aktueller Marktwert / Verkaufswert"
               value={oldCar.currentMarketValue}
@@ -194,6 +196,24 @@ function App() {
               suffix="€"
               step={100}
             />
+            <NumberField
+              label="Erwartete Gesamt-Laufleistung"
+              value={oldCar.expectedLifetimeKm}
+              onChange={(v) => setOldCar({ ...oldCar, expectedLifetimeKm: v })}
+              suffix="km"
+              step={10000}
+              hint="Danach ist Schluss: Ersatzkauf wird eingerechnet (Diesel typ. 300–400.000)"
+            />
+            <NumberField
+              label="Ersatzbeschaffung bei Ausfall"
+              value={oldCar.replacementCost}
+              onChange={(v) => setOldCar({ ...oldCar, replacementCost: v })}
+              suffix="€"
+              step={500}
+              hint="Gleichwertiger Gebrauchter (halbe Lebensdauer, ~6 Jahre)"
+            />
+          </div>
+          <div className="mb-3">
             <label className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               <input
                 type="checkbox"

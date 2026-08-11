@@ -59,6 +59,10 @@ export interface CarConfig {
 export interface OldCarConfig extends CarConfig {
   /** Aktueller Verkaufswert / Restwert des Bestandsfahrzeugs heute. */
   currentMarketValue: number
+  /** Erwartete Gesamt-Laufleistung, ab der das Fahrzeug wirtschaftlich am Ende ist (Motor/Getriebe/Karosserie). */
+  expectedLifetimeKm: number
+  /** Kosten einer gleichwertigen gebrauchten Ersatzbeschaffung, falls das Fahrzeug im Zeitraum ausfällt. */
+  replacementCost: number
 }
 
 export interface GeneralParams {
@@ -97,6 +101,8 @@ export interface YearBreakdown {
   financingInterest: number
   /** THG-Quoten-Erlös (negativ auf die Kosten wirkend), bereits in ongoingTotal enthalten. */
   thgIncome: number
+  /** Ersatzbeschaffung in diesem Jahr (Fahrzeug hat seine Lebensdauer erreicht), in ongoingTotal enthalten. */
+  replacement: number
   ongoingTotal: number
 }
 
@@ -109,6 +115,10 @@ export interface CarResult {
   cumulative: number[]
   /** Noch offene Finanzierungsschuld je Jahr (0 bei Cash/Leasing bzw. nach Tilgung). */
   outstandingBalance: number[]
+  /** Erzielbarer Verkaufserlös je Jahr (Index 0 = heute; berücksichtigt Ersatzbeschaffungen, bei Leasing 0). */
+  resaleByYear: number[]
+  /** Jahr der ersten Ersatzbeschaffung wegen erreichter Lebensdauer, sonst null. */
+  endOfLifeYear: number | null
   residualValueAtHorizon: number
   totalCostAtHorizon: number
 }
