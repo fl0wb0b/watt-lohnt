@@ -21,7 +21,7 @@
 
 const UPSTREAM = 'https://vrmapi.victronenergy.com'
 
-const ALLOWED_ORIGINS = ['https://fl0wb0b.github.io']
+const ALLOWED_ORIGINS = ['https://watt-lohnt.fl0wb0b.com', 'https://fl0wb0b.github.io']
 
 const ALLOWED_PATHS = [
   /^\/v2\/auth\/verifyshare$/,

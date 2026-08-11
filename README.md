@@ -1,6 +1,6 @@
 # Watt lohnt? – Lohnt sich das Elektroauto?
 
-**Live: https://fl0wb0b.github.io/watt-lohnt/**
+**Live: https://watt-lohnt.fl0wb0b.com**
 
 powered by [fL0wb0b](https://github.com/fl0wb0b)
 
