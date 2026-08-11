@@ -241,6 +241,45 @@ function App() {
           </p>
           <CarForm car={newCar} onChange={setNewCar} />
 
+          {newCar.financingType === 'lease' && (
+            <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
+              <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                Effektive Sofortkosten (Leasing)
+              </p>
+              <dl className="space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="flex justify-between">
+                  <dt>Leasing-Sonderzahlung</dt>
+                  <dd className="tabular-nums">{newCar.leaseSpecialPayment.toLocaleString('de-DE')} €</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={useTradeIn}
+                      onChange={(e) => setUseTradeIn(e.target.checked)}
+                      className="size-3.5 rounded border-slate-300"
+                    />
+                    − Verkaufserlös Bestandsfahrzeug
+                  </dt>
+                  <dd
+                    className={`tabular-nums ${useTradeIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 line-through'}`}
+                  >
+                    −{oldCar.currentMarketValue.toLocaleString('de-DE')} €
+                  </dd>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-100">
+                  <dt>Sofort fällig (negativ = Gutschrift in der Tasche)</dt>
+                  <dd className="tabular-nums">
+                    {(
+                      newCar.leaseSpecialPayment - (useTradeIn ? oldCar.currentMarketValue : 0)
+                    ).toLocaleString('de-DE')}{' '}
+                    €
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
           {newCar.financingType !== 'lease' && (
             <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
               <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">

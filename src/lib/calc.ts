@@ -124,7 +124,9 @@ export function computeCarResult(
   let effectiveDepreciationBasis = depreciationBasis
 
   if (car.financingType === 'lease') {
-    upfrontCash = car.leaseSpecialPayment
+    // Verkaufserlös des Altwagens bleibt auch beim Leasing echtes Geld: er mindert die
+    // Sofortkosten (ggf. bis ins Negative = Gutschrift), sonst wäre Leasing unfair benachteiligt.
+    upfrontCash = car.leaseSpecialPayment - tradeInValue
     effectiveDepreciationBasis = 0 // kein Eigentum, kein Restwert
     for (let y = 1; y <= horizon; y++) {
       const withinTerm = y <= car.leaseTermYears

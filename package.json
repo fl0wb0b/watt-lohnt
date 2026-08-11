@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check:calc": "tsx scripts/sanity-check.mts",
-    "check:critical": "tsx scripts/critical-runs.mts"
+    "check:critical": "tsx scripts/critical-runs.mts",
+    "check:critical2": "tsx scripts/critical-runs-2.mts"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",
