@@ -2,6 +2,8 @@
 
 **Live: https://fl0wb0b.github.io/watt-lohnt/**
 
+⚡ powered by [fl0wb0b](https://github.com/fl0wb0b)
+
 Installierbare PWA, die die Gesamtkosten eines Elektroautos mit denen
 eines bestehenden Fahrzeugs vergleicht – inklusive Kaufpreis, Finanzierung
 (Barkauf/Kredit/Ballon/Leasing), Förderung, THG-Quote, Steuer, Versicherung,

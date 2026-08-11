@@ -400,9 +400,20 @@ function App() {
         )}
       </div>
 
-      <footer className="mt-8 pb-4 text-center text-xs text-slate-400">
-        Alle Berechnungen laufen lokal im Browser, es werden keine Daten an einen Server
-        übertragen (außer beim optionalen VRM-Live-Abruf über den konfigurierten Proxy).
+      <footer className="mt-8 flex flex-col items-center gap-1.5 pb-4 text-center text-xs text-slate-400">
+        <p>
+          Alle Berechnungen laufen lokal im Browser, es werden keine Daten an einen Server
+          übertragen (außer beim optionalen VRM-Live-Abruf über den konfigurierten Proxy).
+        </p>
+        <a
+          href="https://github.com/fl0wb0b"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-slate-500 transition hover:text-sky-500 dark:text-slate-400"
+        >
+          <Zap className="size-3.5" />
+          powered by fl0wb0b
+        </a>
       </footer>
     </div>
   )
