@@ -30,7 +30,6 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   const [kwp, setKwp] = useState(9)
   const [specificYield, setSpecificYield] = useState(1000)
   const [quickConsumption, setQuickConsumption] = useState(4500)
-  const [hasBattery, setHasBattery] = useState(false)
 
   // Live-Abruf
   const [link, setLink] = useState('')
@@ -57,9 +56,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
     nextKwp = kwp,
     nextYield = specificYield,
     nextConsumption = quickConsumption,
-    nextBattery = hasBattery,
   ) => {
-    onChange(estimatePvFromSize(nextKwp, nextYield, nextConsumption, nextBattery))
+    // Heimspeicher wird nicht mehr hier pauschal geschätzt, sondern unten in der
+    // Ladesimulation mit echter kWh-Kapazität gerechnet.
+    onChange(estimatePvFromSize(nextKwp, nextYield, nextConsumption, false))
   }
 
   const handleLiveFetch = async () => {
@@ -150,18 +150,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
               suffix="kWh/Jahr"
               step={100}
             />
-            <label className="flex items-end gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={hasBattery}
-                onChange={(e) => {
-                  setHasBattery(e.target.checked)
-                  applyQuick(undefined, undefined, undefined, e.target.checked)
-                }}
-                className="size-4 rounded border-slate-300"
-              />
-              Heimspeicher vorhanden
-            </label>
+            <p className="flex items-end pb-2 text-xs text-slate-400">
+              Heimspeicher? Kapazität in kWh unten bei „Ladeverhalten &amp; Heimspeicher" angeben –
+              er wird dort exakt mitsimuliert (inkl. Auto-Laden aus dem Speicher).
+            </p>
           </div>
           <p className="rounded-md bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
             Geschätzt: <strong>{Math.round(value.annualYieldKwh).toLocaleString('de-DE')} kWh/Jahr</strong> Ertrag,{' '}

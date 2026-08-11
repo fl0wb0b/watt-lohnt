@@ -240,6 +240,61 @@ function App() {
             {getPreset(presetId).description} · Richtwerte, bitte an eigenes Angebot anpassen.
           </p>
           <CarForm car={newCar} onChange={setNewCar} />
+
+          {newCar.financingType !== 'lease' && (
+            <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
+              <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                Effektive Anschaffungsrechnung
+              </p>
+              <dl className="space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="flex justify-between">
+                  <dt>Kaufpreis</dt>
+                  <dd className="tabular-nums">{newCar.purchasePrice.toLocaleString('de-DE')} €</dd>
+                </div>
+                {newCar.subsidy > 0 && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <dt>− Förderung/Umweltbonus</dt>
+                    <dd className="tabular-nums">−{newCar.subsidy.toLocaleString('de-DE')} €</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={useTradeIn}
+                      onChange={(e) => setUseTradeIn(e.target.checked)}
+                      className="size-3.5 rounded border-slate-300"
+                    />
+                    − Verkaufserlös Bestandsfahrzeug (Inzahlungnahme)
+                  </dt>
+                  <dd
+                    className={`tabular-nums ${useTradeIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 line-through'}`}
+                  >
+                    −{oldCar.currentMarketValue.toLocaleString('de-DE')} €
+                  </dd>
+                </div>
+                {newCar.financingType !== 'cash' && newCar.downPayment > 0 && (
+                  <div className="flex justify-between">
+                    <dt>− Anzahlung (aus Ersparnissen)</dt>
+                    <dd className="tabular-nums">−{newCar.downPayment.toLocaleString('de-DE')} €</dd>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-100">
+                  <dt>{newCar.financingType === 'cash' ? 'Bar zu zahlen' : 'Zu finanzieren'}</dt>
+                  <dd className="tabular-nums">
+                    {Math.max(
+                      0,
+                      newCar.purchasePrice -
+                        newCar.subsidy -
+                        (useTradeIn ? oldCar.currentMarketValue : 0) -
+                        (newCar.financingType === 'cash' ? 0 : newCar.downPayment),
+                    ).toLocaleString('de-DE')}{' '}
+                    €
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
         </Section>
       )}
 

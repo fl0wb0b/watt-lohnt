@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check:calc": "tsx scripts/sanity-check.mts"
+    "check:calc": "tsx scripts/sanity-check.mts",
+    "check:critical": "tsx scripts/critical-runs.mts"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",
