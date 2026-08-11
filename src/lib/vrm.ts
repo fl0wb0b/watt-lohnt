@@ -27,16 +27,32 @@ export function parseVrmLink(input: string): ParsedVrmLink | null {
 
 export class VrmFetchError extends Error {}
 
-/** Offizieller API-Host laut VRM-API-Doku (nicht vrm.victronenergy.com selbst). */
-const VRM_API_BASE = 'https://vrmapi.victronenergy.com/v2'
+/** Offizieller VRM-API-Host (Direktabruf; aus dem Browser fremder Domains per CORS gesperrt). */
+const VRM_API_DIRECT = 'https://vrmapi.victronenergy.com/v2'
 
+/**
+ * Liefert die Basis-URL für API-Aufrufe. Ohne Proxy → Victron direkt (funktioniert nur ohne
+ * CORS-Beschränkung, z.B. serverseitig). Mit Proxy → über einen eigenen CORS-offenen Vermittler
+ * (siehe workers/vrm-proxy.js), der Pfad `/v2/...` unverändert an Victron weiterreicht.
+ */
+function apiBase(proxyBase?: string): string {
+  const trimmed = proxyBase?.trim().replace(/\/+$/, '')
+  return trimmed ? `${trimmed}/v2` : VRM_API_DIRECT
+}
+
+/**
+ * Liest die Jahreskennzahlen aus der overallstats-Antwort. Struktur (per Netzwerk-Analyse des
+ * echten Share-Dashboards): records.year.totals mit total_solar_yield / total_consumption /
+ * grid_history_to (Einspeisung) – alle bereits in kWh.
+ */
 async function requestOverallStats(
   installationId: string,
   authHeader: string,
+  proxyBase?: string,
 ): Promise<VrmPvData | null> {
   let response: Response
   try {
-    response = await fetch(`${VRM_API_BASE}/installations/${installationId}/overallstats`, {
+    response = await fetch(`${apiBase(proxyBase)}/installations/${installationId}/overallstats`, {
       headers: { 'X-Authorization': authHeader, Accept: 'application/json' },
     })
   } catch {
@@ -45,12 +61,15 @@ async function requestOverallStats(
   if (!response.ok) return null
 
   const data = await response.json().catch(() => null)
-  const records = data?.records?.this_year ?? data?.records?.total ?? data?.records
-  if (!records || typeof records !== 'object') return null
+  const records = data?.records as Record<string, Record<string, unknown>> | undefined
+  const totals = (records?.year?.totals ??
+    records?.this_year ??
+    records?.total) as Record<string, unknown> | undefined
+  if (!totals || typeof totals !== 'object') return null
 
-  const annualYieldKwh = pickFirstNumber(records, ['solar_yield', 'total_solar_yield', 'Pdc'])
-  const consumption = pickFirstNumber(records, ['consumption', 'total_consumption'])
-  const toGrid = pickFirstNumber(records, ['grid_history_to_grid', 'to_grid']) ?? 0
+  const annualYieldKwh = pickNumber(totals, ['total_solar_yield', 'solar_yield'])
+  const consumption = pickNumber(totals, ['total_consumption', 'consumption'])
+  const toGrid = pickNumber(totals, ['grid_history_to', 'grid_history_to_grid', 'to_grid']) ?? 0
   if (annualYieldKwh == null || consumption == null) return null
 
   const selfConsumedKwh = Math.max(0, annualYieldKwh - toGrid)
@@ -66,168 +85,78 @@ async function requestOverallStats(
 
 /**
  * Ruft Jahres-PV-Ertrag und Verbrauch live über die VRM API v2 ab – mit persönlichem Access
- * Token (VRM → Preferences → Integrations → "Access tokens").
+ * Token (VRM → Preferences → Integrations → "Access tokens"). Optional über einen Proxy.
  */
 export async function fetchVrmAnnualStats(
   installationId: string,
   accessToken: string,
+  proxyBase?: string,
 ): Promise<VrmPvData> {
   const result =
-    (await requestOverallStats(installationId, `Token ${accessToken}`)) ??
-    (await requestOverallStats(installationId, `Bearer ${accessToken}`))
+    (await requestOverallStats(installationId, `Token ${accessToken}`, proxyBase)) ??
+    (await requestOverallStats(installationId, `Bearer ${accessToken}`, proxyBase))
   if (!result) {
     throw new VrmFetchError(
-      'Live-Abruf mit Access Token fehlgeschlagen (Token ungültig, keine Berechtigung für diese Installation oder Netzwerk/CORS). Alternativ Schnellschätzung oder manuelle Eingabe nutzen.',
+      'Live-Abruf mit Access Token fehlgeschlagen (Token ungültig, keine Berechtigung für diese Installation oder – ohne Proxy – vom Browser wegen CORS blockiert). Alternativ Schnellschätzung oder manuelle Eingabe nutzen.',
     )
   }
   return result
 }
 
 /**
- * Tauscht den Share-Hash eines öffentlichen VRM-Links gegen ein zeitlich befristetes Bearer-JWT –
- * derselbe Mechanismus, den Victrons eigenes Dashboard beim Öffnen eines Share-Links nutzt
- * (POST /v2/auth/verifyshare, per Netzwerk-Analyse ermittelt; offiziell undokumentiert).
- * Da das exakte Body-Format nicht dokumentiert ist, werden mehrere plausible Varianten probiert.
+ * Tauscht den Share-Hash eines öffentlichen VRM-Links gegen ein befristetes Bearer-JWT.
+ * Verifiziertes Format (per Netzwerk-Analyse des echten Share-Dashboards):
+ * POST /v2/auth/verifyshare mit JSON { idSite, token }, Antwort { success, token, idUser }.
  */
-async function exchangeShareHashForToken(shareHash: string): Promise<string | null> {
-  const url = `${VRM_API_BASE}/auth/verifyshare`
-  const jsonPost = (body: unknown): RequestInit => ({
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(body),
-  })
-  const attempts: Array<{ url: string; init: RequestInit }> = [
-    { url, init: jsonPost({ hash: shareHash }) },
-    { url, init: jsonPost({ share_token: shareHash }) },
-    { url, init: jsonPost({ shareToken: shareHash }) },
-    { url, init: jsonPost({ site_hash: shareHash }) },
-    { url: `${url}?hash=${encodeURIComponent(shareHash)}`, init: { method: 'GET' } },
-    { url: `${url}?share=${encodeURIComponent(shareHash)}`, init: { method: 'GET' } },
-    { url, init: { method: 'GET', headers: { 'X-Share-Token': shareHash } } },
-  ]
-
-  for (const attempt of attempts) {
-    try {
-      const response = await fetch(attempt.url, attempt.init)
-      if (!response.ok) continue
-      // Victron liefert erneuerte Tokens auch über den freigegebenen Response-Header x-token.
-      const xToken = response.headers.get('x-token')
-      const data: unknown = await response.json().catch(() => null)
-      const body = data as Record<string, unknown> | null
-      const candidate =
-        (typeof body?.token === 'string' && body.token) ||
-        (typeof (body?.records as Record<string, unknown> | undefined)?.token === 'string' &&
-          ((body!.records as Record<string, unknown>).token as string)) ||
-        (typeof body?.access_token === 'string' && body.access_token) ||
-        xToken
-      if (typeof candidate === 'string' && candidate.length > 20) return candidate
-    } catch {
-      // Netzwerk-/CORS-Fehler → nächste Variante probieren
-    }
-  }
-  return null
-}
-
-const YIELD_KEYS = ['solar_yield', 'total_solar_yield', 'Pdc']
-const CONSUMPTION_KEYS = ['consumption', 'total_consumption', 'Pc']
-const TO_GRID_KEYS = ['grid_history_to_grid', 'to_grid', 'Pg']
-
-function sumSeries(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (Array.isArray(value)) {
-    let sum = 0
-    let found = false
-    for (const entry of value) {
-      if (Array.isArray(entry) && typeof entry[1] === 'number' && Number.isFinite(entry[1])) {
-        sum += entry[1]
-        found = true
-      }
-    }
-    return found ? sum : null
-  }
-  return null
-}
-
-function pickTotal(obj: Record<string, unknown> | null | undefined, keys: string[]): number | null {
-  if (!obj) return null
-  for (const key of keys) {
-    const total = sumSeries(obj[key])
-    if (total != null) return total
-  }
-  return null
-}
-
-/** Werte > 100.000 sind bei Heim-PV praktisch sicher Wh statt kWh (z.B. Pdc-Totals der stats-API). */
-function toKwh(value: number): number {
-  return value > 100_000 ? value / 1000 : value
-}
-
-/**
- * Fallback, falls overallstats für Share-Tokens gesperrt ist: Jahres-Statistik über den
- * stats-Endpunkt aggregieren (monatsweise, letzte 365 Tage) – derselbe Endpunkt, den das
- * Share-Dashboard selbst benutzt (type=kwh, Zeitstempel in Sekunden).
- */
-async function requestAnnualKwhStats(
+async function exchangeShareHashForToken(
   installationId: string,
-  authHeader: string,
-): Promise<VrmPvData | null> {
-  const end = Math.floor(Date.now() / 1000)
-  const start = end - 365 * 24 * 3600
-  const url = `${VRM_API_BASE}/installations/${installationId}/stats?type=kwh&interval=months&start=${start}&end=${end}`
+  shareHash: string,
+  proxyBase?: string,
+): Promise<string | null> {
   let response: Response
   try {
-    response = await fetch(url, {
-      headers: { 'X-Authorization': authHeader, Accept: 'application/json' },
+    response = await fetch(`${apiBase(proxyBase)}/auth/verifyshare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ idSite: installationId, token: shareHash }),
     })
   } catch {
-    return null
+    return null // Netzwerk/CORS
   }
   if (!response.ok) return null
 
-  const data = await response.json().catch(() => null)
-  const totals = data?.totals as Record<string, unknown> | undefined
-  const records = data?.records as Record<string, unknown> | undefined
-
-  const rawYield = pickTotal(totals, YIELD_KEYS) ?? pickTotal(records, YIELD_KEYS)
-  const rawConsumption = pickTotal(totals, CONSUMPTION_KEYS) ?? pickTotal(records, CONSUMPTION_KEYS)
-  const rawToGrid = pickTotal(totals, TO_GRID_KEYS) ?? pickTotal(records, TO_GRID_KEYS) ?? 0
-  if (rawYield == null || rawConsumption == null) return null
-
-  const annualYieldKwh = toKwh(rawYield)
-  const toGrid = toKwh(rawToGrid)
-  const selfConsumedKwh = Math.max(0, annualYieldKwh - toGrid)
-
-  return {
-    annualYieldKwh,
-    selfConsumptionShare: annualYieldKwh > 0 ? selfConsumedKwh / annualYieldKwh : 0,
-    annualHouseholdConsumptionKwh: toKwh(rawConsumption),
-    source: 'live',
-  }
+  const xToken = response.headers.get('x-token')
+  const data = (await response.json().catch(() => null)) as Record<string, unknown> | null
+  const candidate = (typeof data?.token === 'string' && data.token) || xToken
+  return typeof candidate === 'string' && candidate.length > 20 ? candidate : null
 }
 
 /**
  * Direktabruf über einen öffentlichen VRM-Share-Link, ohne Access Token: Share-Hash gegen
- * Bearer-JWT tauschen (verifyshare), dann Jahresstatistik abrufen. Nutzt denselben – offiziell
- * undokumentierten – Mechanismus wie Victrons eigenes Share-Dashboard und kann daher brechen,
- * wenn Victron ihn ändert. Fallbacks: Schnellschätzung oder manuelle Eingabe.
+ * Bearer-JWT tauschen (verifyshare), dann Jahresstatistik abrufen. Ohne Proxy blockiert der
+ * Browser die Aufrufe wegen Victrons CORS-Regel – dann Proxy-URL angeben (workers/vrm-proxy.js)
+ * oder auf Schnellschätzung / manuelle Eingabe ausweichen.
  */
-export async function fetchVrmViaShareLink(parsed: ParsedVrmLink): Promise<VrmPvData> {
+export async function fetchVrmViaShareLink(
+  parsed: ParsedVrmLink,
+  proxyBase?: string,
+): Promise<VrmPvData> {
   if (!parsed.shareToken) {
     throw new VrmFetchError(
       'Der Link enthält keinen Share-Teil (…/share/…). Bitte den vollständigen Share-Link aus VRM kopieren.',
     )
   }
 
-  const jwt = await exchangeShareHashForToken(parsed.shareToken)
+  const jwt = await exchangeShareHashForToken(parsed.installationId, parsed.shareToken, proxyBase)
   if (!jwt) {
     throw new VrmFetchError(
-      'Der Share-Hash konnte nicht gegen ein Zugriffstoken getauscht werden (verifyshare abgelehnt oder vom Browser wegen CORS blockiert). Bitte Schnellschätzung nutzen oder Werte manuell eintragen.',
+      proxyBase
+        ? 'Der Share-Hash konnte über den Proxy nicht gegen ein Token getauscht werden. Proxy-URL korrekt und Worker erreichbar? Sonst Schnellschätzung oder manuelle Eingabe nutzen.'
+        : 'Aus dem Browser blockiert Victron den Abruf (CORS). Trag eine Proxy-URL ein (siehe Hinweis) oder nutze Schnellschätzung / manuelle Eingabe.',
     )
   }
 
-  const result =
-    (await requestOverallStats(parsed.installationId, `Bearer ${jwt}`)) ??
-    (await requestAnnualKwhStats(parsed.installationId, `Bearer ${jwt}`))
+  const result = await requestOverallStats(parsed.installationId, `Bearer ${jwt}`, proxyBase)
   if (!result) {
     throw new VrmFetchError(
       'Token-Tausch hat geklappt, aber der Statistik-Abruf schlug fehl. Bitte Schnellschätzung nutzen oder Werte manuell eintragen.',
@@ -236,11 +165,10 @@ export async function fetchVrmViaShareLink(parsed: ParsedVrmLink): Promise<VrmPv
   return result
 }
 
-function pickFirstNumber(obj: Record<string, unknown>, keys: string[]): number | null {
+function pickNumber(obj: Record<string, unknown>, keys: string[]): number | null {
   for (const key of keys) {
     const value = obj[key]
     if (typeof value === 'number' && Number.isFinite(value)) return value
-    if (Array.isArray(value) && typeof value[1] === 'number') return value[1]
   }
   return null
 }

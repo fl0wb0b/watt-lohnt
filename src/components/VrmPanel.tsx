@@ -32,10 +32,21 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   // Live-Abruf
   const [link, setLink] = useState('')
   const [accessToken, setAccessToken] = useState('')
+  const [proxyUrl, setProxyUrl] = useState(
+    () => (typeof localStorage !== 'undefined' && localStorage.getItem('vrmProxyUrl')) || '',
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const parsed = parseVrmLink(link)
+
+  const updateProxyUrl = (v: string) => {
+    setProxyUrl(v)
+    if (typeof localStorage !== 'undefined') {
+      if (v.trim()) localStorage.setItem('vrmProxyUrl', v.trim())
+      else localStorage.removeItem('vrmProxyUrl')
+    }
+  }
 
   const applyQuick = (
     nextKwp = kwp,
@@ -54,10 +65,11 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
     setLoading(true)
     setError(null)
     try {
-      // Mit Token: offizieller Weg. Ohne Token: experimenteller Direktversuch über den Share-Hash.
+      const proxy = proxyUrl.trim() || undefined
+      // Mit Token: offizieller Weg. Ohne Token: Share-Hash → verifyshare → Statistik.
       const data = accessToken.trim()
-        ? await fetchVrmAnnualStats(parsed.installationId, accessToken.trim())
-        : await fetchVrmViaShareLink(parsed)
+        ? await fetchVrmAnnualStats(parsed.installationId, accessToken.trim(), proxy)
+        : await fetchVrmViaShareLink(parsed, proxy)
       onChange(data)
     } catch (e) {
       setError(e instanceof VrmFetchError ? e.message : 'Unbekannter Fehler beim Live-Abruf.')
@@ -189,7 +201,7 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
         <div className="flex flex-col gap-2">
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-300">
-              VRM-Link oder Installations-ID
+              VRM-Share-Link
             </span>
             <input
               type="text"
@@ -202,17 +214,32 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-300">
-              VRM Access Token{' '}
-              <span className="font-normal text-slate-400">(optional – ohne Token wird ein Direktabruf über den Share-Link versucht)</span>
+              Proxy-URL{' '}
+              <span className="font-normal text-slate-400">(nötig für Browser-Abruf – siehe Hinweis)</span>
             </span>
+            <input
+              type="text"
+              placeholder="https://vrm-proxy.deinname.workers.dev"
+              className={inputClass}
+              value={proxyUrl}
+              onChange={(e) => updateProxyUrl(e.target.value)}
+            />
+          </label>
+
+          <details className="text-xs text-slate-400">
+            <summary className="cursor-pointer select-none">VRM Access Token (optional)</summary>
             <input
               type="password"
               placeholder="VRM → Preferences → Integrations → Access tokens"
-              className={inputClass}
+              className={`${inputClass} mt-1`}
               value={accessToken}
               onChange={(e) => setAccessToken(e.target.value)}
             />
-          </label>
+            <span className="mt-1 block">
+              Nur nötig, wenn kein Share-Link vorliegt. Für den normalen Weg (Share-Link) leer
+              lassen.
+            </span>
+          </details>
 
           <button
             type="button"
@@ -238,11 +265,11 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           )}
 
           <p className="text-xs text-slate-400">
-            Ohne Token nutzt die App denselben Mechanismus wie Victrons eigenes Share-Dashboard:
-            Der Share-Hash wird gegen ein befristetes Zugriffstoken getauscht (verifyshare) und
-            damit die Jahresstatistik geladen. Da Victron diesen Weg nicht offiziell dokumentiert,
-            kann er jederzeit brechen – dann bleiben Access Token (offizieller Weg),
-            Schnellschätzung oder manuelles Ablesen.
+            Victron blockiert direkte Browser-Abrufe von fremden Seiten (CORS). Deshalb läuft der
+            Abruf über einen kleinen, kostenlosen Proxy (Cloudflare Worker – Code &amp; Anleitung
+            im Repo unter <code>workers/vrm-proxy.js</code>). Einmal deployen, seine URL oben
+            eintragen (wird lokal gespeichert), dann genügt der reine Share-Link – ganz ohne
+            VRM-Token. Kein Proxy zur Hand? Schnellschätzung (nur kWp) oder manuelle Eingabe nutzen.
           </p>
         </div>
       )}

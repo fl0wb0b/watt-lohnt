@@ -83,6 +83,33 @@ Ballon vs. Leasing vs. Barkauf für dasselbe Fahrzeug) mit erwarteten
 Größenordnungen, um Regressionen bei Änderungen an der Rechenlogik früh zu
 bemerken.
 
+## Automatischer Share-Link-Abruf (Proxy)
+
+Der eleganteste Weg: Nutzer fügen nur ihren VRM-**Share-Link** ein, die App holt PV-Ertrag,
+Verbrauch und Netzeinspeisung automatisch. Technisch läuft das so (per Netzwerk-Analyse des
+echten VRM-Dashboards ermittelt):
+
+1. `POST https://vrmapi.victronenergy.com/v2/auth/verifyshare` mit `{ idSite, token }`
+   (`token` = Share-Hash aus dem Link) → liefert ein 24h gültiges anonymes Bearer-JWT.
+2. `GET /v2/installations/{idSite}/overallstats` mit diesem JWT → `records.year.totals`
+   (`total_solar_yield`, `total_consumption`, `grid_history_to`, alle in kWh).
+
+**Haken:** Victron sendet für fremde Origins keine CORS-Header, ein direkter Browser-Abruf von
+GitHub Pages wird also blockiert. Lösung ist ein winziger, kostenloser Proxy, der die Anfrage
+serverseitig (ohne CORS-Sperre) weiterreicht: `workers/vrm-proxy.js` (Cloudflare Worker).
+
+Deploy des Proxys (einmalig, kostenlos):
+
+```bash
+npx wrangler deploy workers/vrm-proxy.js --name vrm-proxy
+# oder im Cloudflare-Dashboard: Workers & Pages → Create Worker → Inhalt einfügen → Deploy
+```
+
+Die vergebene Worker-URL (z.B. `https://vrm-proxy.deinname.workers.dev`) trägt man in der App im
+Tab „VRM-Live" ins Feld **Proxy-URL** ein (wird im Browser lokal gespeichert). Danach genügt der
+reine Share-Link – ganz ohne VRM Access Token. Der Proxy reicht ausschließlich `/v2/*` an Victron
+weiter und speichert/protokolliert nichts.
+
 ## Victron VRM – Live-Abruf vs. manuelle Eingabe
 
 Ein öffentlicher VRM-**Share-Link** (`.../installation/{id}/share/{token}`)
