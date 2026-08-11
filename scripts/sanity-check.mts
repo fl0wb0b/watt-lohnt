@@ -70,6 +70,23 @@ const BASE_OLD_CAR: OldCarConfig = {
   }
 }
 
+// --- 3b) PV-Strom fließt wirklich in die Kosten ein: Solaranteil 0% vs 98% muss die Energiekosten drastisch ändern.
+{
+  const teslaPreset = getPreset('tesla-model-y')
+  const car = { id: 'new', label: 'Tesla', ...teslaPreset.config } // 14.000 km, 14,5 kWh/100km
+  const needKwh = (car.annualKm / 100) * car.consumptionPer100km * 1.1 // inkl. 10% Ladeverluste
+  const g0 = { ...BASE_GENERAL, pvSelfConsumptionShareForEv: 0 }
+  const g98 = { ...BASE_GENERAL, pvSelfConsumptionShareForEv: 0.98 }
+  const e0 = computeCarResult(car, g0, 0).years[0].energy
+  const e98 = computeCarResult(car, g98, 0).years[0].energy
+  const expected0 = needKwh * 0.32
+  const expected98 = needKwh * (0.98 * 0.08 + 0.02 * 0.32)
+  console.log('\n--- PV-Strom in der Kostenrechnung ---')
+  console.log(`0%  Solar: ${e0.toFixed(0)} €/Jahr (erwartet ${expected0.toFixed(0)})`)
+  console.log(`98% Solar: ${e98.toFixed(0)} €/Jahr (erwartet ${expected98.toFixed(0)})`)
+  console.log('PV senkt die Ladekosten korrekt:', e98 < e0 * 0.4 ? 'JA' : 'NEIN!')
+}
+
 // --- 4) Full comparison: realistic household, high annual mileage -> EV should win comfortably
 {
   const general = BASE_GENERAL
