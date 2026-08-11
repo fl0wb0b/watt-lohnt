@@ -405,15 +405,8 @@ function App() {
           Alle Berechnungen laufen lokal im Browser, es werden keine Daten an einen Server
           übertragen (außer beim optionalen VRM-Live-Abruf über den konfigurierten Proxy).
         </p>
-        <a
-          href="https://github.com/fl0wb0b"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 font-medium text-slate-500 transition hover:text-sky-500 dark:text-slate-400"
-        >
-          <Zap className="size-3.5" />
-          powered by fl0wb0b
-        </a>
+        {/* Wortlaut/Schreibweise exakt wie bei planer.fl0wb0b.com */}
+        <span className="font-medium text-slate-500 dark:text-slate-400">powered by fL0wb0b</span>
       </footer>
     </div>
   )
