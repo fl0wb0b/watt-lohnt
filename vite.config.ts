@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Deployt auf GitHub Pages unter https://fl0wb0b.github.io/watt-lohnt/ – daher der base-Pfad.
+// Deployt auf GitHub Pages mit Custom Domain https://watt-lohnt.fl0wb0b.com – Root-Pfad.
 export default defineConfig({
-  base: '/watt-lohnt/',
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -20,8 +20,8 @@ export default defineConfig({
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
-        start_url: '/watt-lohnt/',
-        scope: '/watt-lohnt/',
+        start_url: '/',
+        scope: '/',
         lang: 'de',
         icons: [
           {
