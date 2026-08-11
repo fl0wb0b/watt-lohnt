@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Car, Sun, Zap } from 'lucide-react'
 import { CarForm } from './components/CarForm'
 import { GeneralParamsForm } from './components/GeneralParamsForm'
+import { BreakdownView } from './components/BreakdownView'
 import { ChargingPanel } from './components/ChargingPanel'
 import { ResultsView } from './components/ResultsView'
 import { Section, NumberField } from './components/fields'
@@ -114,8 +115,18 @@ function App() {
     [oldCar, newCar, fullGeneral, useTradeIn],
   )
 
+  const steps = [
+    { id: 'general', label: 'Allgemein' },
+    { id: 'old', label: 'Bestand' },
+    { id: 'new', label: 'Wunschfahrzeug' },
+    { id: 'pv', label: 'PV & Laden' },
+    { id: 'result', label: 'Übersicht' },
+  ] as const
+  const [step, setStep] = useState(0)
+  const isLast = step === steps.length - 1
+
   return (
-    <div className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 flex items-center gap-3">
         <div className="flex size-11 items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm">
           <Zap className="size-6" />
@@ -131,29 +142,45 @@ function App() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="Allgemeine Parameter" subtitle="Energiepreise, Betrachtungszeitraum, Kostensteigerung">
+      {/* Schritt-Navigation */}
+      <nav className="mb-5 flex items-center gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1.5 dark:bg-slate-800">
+        {steps.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => setStep(i)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+              i === step
+                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <span
+              className={`flex size-5 items-center justify-center rounded-full text-xs ${
+                i === step
+                  ? 'bg-sky-600 text-white'
+                  : i < step
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-300 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+              }`}
+            >
+              {i < step ? '✓' : i + 1}
+            </span>
+            {s.label}
+          </button>
+        ))}
+      </nav>
+
+      {step === 0 && (
+        <Section title="Allgemeine Parameter" subtitle="Energiepreise, Betrachtungszeitraum, Kostensteigerung, Toleranz">
           <GeneralParamsForm value={general} onChange={setGeneral} />
         </Section>
+      )}
 
-        <Section
-          title="PV-Anlage (Victron VRM) & Ladesimulation"
-          subtitle="Bestimmt per Simulation, wie viel EV-Ladestrom aus eigener Solarproduktion kommt"
-          right={<Sun className="size-5 text-amber-500" />}
-        >
-          <VrmPanel value={vrm} onChange={setVrm} />
-          <div className="my-4 border-t border-slate-200 dark:border-slate-800" />
-          <ChargingPanel
-            value={charging}
-            onChange={setCharging}
-            result={chargingSim}
-            isBev={newCar.type === 'bev'}
-          />
-        </Section>
-
+      {step === 1 && (
         <Section
           title={oldCar.label}
-          subtitle="Kosten, wenn das Fahrzeug behalten wird"
+          subtitle="Dein aktuelles Fahrzeug: Kosten, wenn du es behältst"
           right={<Car className="size-5 text-amber-500" />}
         >
           <div className="mb-3">
@@ -176,9 +203,11 @@ function App() {
           </div>
           <CarForm car={oldCar} onChange={(c) => setOldCar({ ...oldCar, ...c })} showPurchaseFields={false} />
         </Section>
+      )}
 
+      {step === 2 && (
         <Section
-          title="Neues Fahrzeug"
+          title="Wunschfahrzeug"
           subtitle="Preset wählen oder komplett frei anpassen"
           right={<Zap className="size-5 text-sky-500" />}
         >
@@ -212,23 +241,74 @@ function App() {
           </p>
           <CarForm car={newCar} onChange={setNewCar} />
         </Section>
-      </div>
+      )}
 
-      <div className="mt-4">
-        <Section title="Ergebnis" subtitle="Kumulierte Gesamtkosten im Vergleich">
-          <ResultsView
-            result={comparison}
-            oldLabel={oldCar.label}
-            newLabel={newCar.label}
-            discountRatePercent={general.discountRatePercent}
-            uncertaintyPercent={general.uncertaintyPercent}
+      {step === 3 && (
+        <Section
+          title="PV-Anlage (Victron VRM) & Ladesimulation"
+          subtitle="Bestimmt per Simulation, wie viel EV-Ladestrom aus eigener Solarproduktion kommt"
+          right={<Sun className="size-5 text-amber-500" />}
+        >
+          <VrmPanel value={vrm} onChange={setVrm} />
+          <div className="my-4 border-t border-slate-200 dark:border-slate-800" />
+          <ChargingPanel
+            value={charging}
+            onChange={setCharging}
+            result={chargingSim}
+            isBev={newCar.type === 'bev'}
           />
         </Section>
+      )}
+
+      {step === 4 && (
+        <div className="flex flex-col gap-4">
+          <Section title="Ergebnis" subtitle="Kumulierte Gesamtkosten im Vergleich">
+            <ResultsView
+              result={comparison}
+              oldLabel={oldCar.label}
+              newLabel={newCar.label}
+              discountRatePercent={general.discountRatePercent}
+              uncertaintyPercent={general.uncertaintyPercent}
+            />
+          </Section>
+          <Section
+            title="Ehrliche Gesamtaufstellung"
+            subtitle={`Jede Kostenposition über ${general.horizonYears} Jahre – nachrechenbar, keine versteckten Posten`}
+          >
+            <BreakdownView
+              oldResult={comparison.old}
+              newResult={comparison.next}
+              oldLabel={oldCar.label}
+              newLabel={newCar.label}
+            />
+          </Section>
+        </div>
+      )}
+
+      {/* Zurück / Weiter */}
+      <div className="mt-5 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setStep(Math.max(0, step - 1))}
+          disabled={step === 0}
+          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:invisible dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          ← Zurück
+        </button>
+        {!isLast && (
+          <button
+            type="button"
+            onClick={() => setStep(step + 1)}
+            className="rounded-md bg-sky-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500"
+          >
+            {step === steps.length - 2 ? 'Zur Übersicht →' : 'Weiter →'}
+          </button>
+        )}
       </div>
 
       <footer className="mt-8 pb-4 text-center text-xs text-slate-400">
         Alle Berechnungen laufen lokal im Browser, es werden keine Daten an einen Server
-        übertragen (außer beim optionalen VRM-Live-Abruf direkt an victronenergy.com).
+        übertragen (außer beim optionalen VRM-Live-Abruf über den konfigurierten Proxy).
       </footer>
     </div>
   )
