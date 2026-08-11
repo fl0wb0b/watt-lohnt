@@ -115,7 +115,7 @@ function App() {
         </div>
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            EV Rechner
+            Watt lohnt?
           </h1>
           <p className="text-sm text-slate-400">
             Lohnt sich das Elektroauto? Vergleich mit deinem Bestandsfahrzeug, unter

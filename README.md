@@ -1,9 +1,12 @@
-# EV Rechner – Lohnt sich das Elektroauto?
+# Watt lohnt? – Lohnt sich das Elektroauto?
 
-Kleine installierbare PWA, die die Gesamtkosten eines Elektroautos mit denen
-eines bestehenden Fahrzeugs vergleicht – inklusive Kaufpreis, Finanzierung,
-Förderung, Steuer, Versicherung, Wartung und Ladekosten unter
-Berücksichtigung einer eigenen PV-Anlage (Victron VRM).
+**Live: https://fl0wb0b.github.io/watt-lohnt/**
+
+Installierbare PWA, die die Gesamtkosten eines Elektroautos mit denen
+eines bestehenden Fahrzeugs vergleicht – inklusive Kaufpreis, Finanzierung
+(Barkauf/Kredit/Ballon/Leasing), Förderung, THG-Quote, Steuer, Versicherung,
+Wartung und Ladekosten unter Berücksichtigung einer eigenen PV-Anlage
+(Victron VRM).
 
 Alles läuft rein clientseitig im Browser, es gibt kein Backend. Eingaben
 werden nicht gespeichert oder übertragen (außer beim optionalen VRM-Live-Abruf,
