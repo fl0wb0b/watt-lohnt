@@ -238,10 +238,11 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           )}
 
           <p className="text-xs text-slate-400">
-            Ohne Token wird versucht, den Share-Hash des Links direkt gegen die VRM-API zu
-            verwenden – das ist experimentell, da Victron dafür keine öffentliche API dokumentiert,
-            und kann jederzeit scheitern. Zuverlässig sind: Access Token (offizieller Weg),
-            Schnellschätzung (nur kWp nötig) oder manuelles Ablesen aus dem Dashboard.
+            Ohne Token nutzt die App denselben Mechanismus wie Victrons eigenes Share-Dashboard:
+            Der Share-Hash wird gegen ein befristetes Zugriffstoken getauscht (verifyshare) und
+            damit die Jahresstatistik geladen. Da Victron diesen Weg nicht offiziell dokumentiert,
+            kann er jederzeit brechen – dann bleiben Access Token (offizieller Weg),
+            Schnellschätzung oder manuelles Ablesen.
           </p>
         </div>
       )}

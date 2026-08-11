@@ -84,10 +84,132 @@ export async function fetchVrmAnnualStats(
 }
 
 /**
- * EXPERIMENTELL: versucht, den Share-Hash aus einem öffentlichen VRM-Share-Link direkt als
- * API-Berechtigung zu verwenden. Victron dokumentiert dafür keine öffentliche API – dieser Weg
- * kann jederzeit funktionieren oder brechen. Schlägt er fehl, bleibt Schnellschätzung/manuelle
- * Eingabe der zuverlässige Weg.
+ * Tauscht den Share-Hash eines öffentlichen VRM-Links gegen ein zeitlich befristetes Bearer-JWT –
+ * derselbe Mechanismus, den Victrons eigenes Dashboard beim Öffnen eines Share-Links nutzt
+ * (POST /v2/auth/verifyshare, per Netzwerk-Analyse ermittelt; offiziell undokumentiert).
+ * Da das exakte Body-Format nicht dokumentiert ist, werden mehrere plausible Varianten probiert.
+ */
+async function exchangeShareHashForToken(shareHash: string): Promise<string | null> {
+  const url = `${VRM_API_BASE}/auth/verifyshare`
+  const jsonPost = (body: unknown): RequestInit => ({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const attempts: Array<{ url: string; init: RequestInit }> = [
+    { url, init: jsonPost({ hash: shareHash }) },
+    { url, init: jsonPost({ share_token: shareHash }) },
+    { url, init: jsonPost({ shareToken: shareHash }) },
+    { url, init: jsonPost({ site_hash: shareHash }) },
+    { url: `${url}?hash=${encodeURIComponent(shareHash)}`, init: { method: 'GET' } },
+    { url: `${url}?share=${encodeURIComponent(shareHash)}`, init: { method: 'GET' } },
+    { url, init: { method: 'GET', headers: { 'X-Share-Token': shareHash } } },
+  ]
+
+  for (const attempt of attempts) {
+    try {
+      const response = await fetch(attempt.url, attempt.init)
+      if (!response.ok) continue
+      // Victron liefert erneuerte Tokens auch über den freigegebenen Response-Header x-token.
+      const xToken = response.headers.get('x-token')
+      const data: unknown = await response.json().catch(() => null)
+      const body = data as Record<string, unknown> | null
+      const candidate =
+        (typeof body?.token === 'string' && body.token) ||
+        (typeof (body?.records as Record<string, unknown> | undefined)?.token === 'string' &&
+          ((body!.records as Record<string, unknown>).token as string)) ||
+        (typeof body?.access_token === 'string' && body.access_token) ||
+        xToken
+      if (typeof candidate === 'string' && candidate.length > 20) return candidate
+    } catch {
+      // Netzwerk-/CORS-Fehler → nächste Variante probieren
+    }
+  }
+  return null
+}
+
+const YIELD_KEYS = ['solar_yield', 'total_solar_yield', 'Pdc']
+const CONSUMPTION_KEYS = ['consumption', 'total_consumption', 'Pc']
+const TO_GRID_KEYS = ['grid_history_to_grid', 'to_grid', 'Pg']
+
+function sumSeries(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (Array.isArray(value)) {
+    let sum = 0
+    let found = false
+    for (const entry of value) {
+      if (Array.isArray(entry) && typeof entry[1] === 'number' && Number.isFinite(entry[1])) {
+        sum += entry[1]
+        found = true
+      }
+    }
+    return found ? sum : null
+  }
+  return null
+}
+
+function pickTotal(obj: Record<string, unknown> | null | undefined, keys: string[]): number | null {
+  if (!obj) return null
+  for (const key of keys) {
+    const total = sumSeries(obj[key])
+    if (total != null) return total
+  }
+  return null
+}
+
+/** Werte > 100.000 sind bei Heim-PV praktisch sicher Wh statt kWh (z.B. Pdc-Totals der stats-API). */
+function toKwh(value: number): number {
+  return value > 100_000 ? value / 1000 : value
+}
+
+/**
+ * Fallback, falls overallstats für Share-Tokens gesperrt ist: Jahres-Statistik über den
+ * stats-Endpunkt aggregieren (monatsweise, letzte 365 Tage) – derselbe Endpunkt, den das
+ * Share-Dashboard selbst benutzt (type=kwh, Zeitstempel in Sekunden).
+ */
+async function requestAnnualKwhStats(
+  installationId: string,
+  authHeader: string,
+): Promise<VrmPvData | null> {
+  const end = Math.floor(Date.now() / 1000)
+  const start = end - 365 * 24 * 3600
+  const url = `${VRM_API_BASE}/installations/${installationId}/stats?type=kwh&interval=months&start=${start}&end=${end}`
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: { 'X-Authorization': authHeader, Accept: 'application/json' },
+    })
+  } catch {
+    return null
+  }
+  if (!response.ok) return null
+
+  const data = await response.json().catch(() => null)
+  const totals = data?.totals as Record<string, unknown> | undefined
+  const records = data?.records as Record<string, unknown> | undefined
+
+  const rawYield = pickTotal(totals, YIELD_KEYS) ?? pickTotal(records, YIELD_KEYS)
+  const rawConsumption = pickTotal(totals, CONSUMPTION_KEYS) ?? pickTotal(records, CONSUMPTION_KEYS)
+  const rawToGrid = pickTotal(totals, TO_GRID_KEYS) ?? pickTotal(records, TO_GRID_KEYS) ?? 0
+  if (rawYield == null || rawConsumption == null) return null
+
+  const annualYieldKwh = toKwh(rawYield)
+  const toGrid = toKwh(rawToGrid)
+  const selfConsumedKwh = Math.max(0, annualYieldKwh - toGrid)
+
+  return {
+    annualYieldKwh,
+    selfConsumptionShare: annualYieldKwh > 0 ? selfConsumedKwh / annualYieldKwh : 0,
+    annualHouseholdConsumptionKwh: toKwh(rawConsumption),
+    source: 'live',
+  }
+}
+
+/**
+ * Direktabruf über einen öffentlichen VRM-Share-Link, ohne Access Token: Share-Hash gegen
+ * Bearer-JWT tauschen (verifyshare), dann Jahresstatistik abrufen. Nutzt denselben – offiziell
+ * undokumentierten – Mechanismus wie Victrons eigenes Share-Dashboard und kann daher brechen,
+ * wenn Victron ihn ändert. Fallbacks: Schnellschätzung oder manuelle Eingabe.
  */
 export async function fetchVrmViaShareLink(parsed: ParsedVrmLink): Promise<VrmPvData> {
   if (!parsed.shareToken) {
@@ -95,12 +217,20 @@ export async function fetchVrmViaShareLink(parsed: ParsedVrmLink): Promise<VrmPv
       'Der Link enthält keinen Share-Teil (…/share/…). Bitte den vollständigen Share-Link aus VRM kopieren.',
     )
   }
+
+  const jwt = await exchangeShareHashForToken(parsed.shareToken)
+  if (!jwt) {
+    throw new VrmFetchError(
+      'Der Share-Hash konnte nicht gegen ein Zugriffstoken getauscht werden (verifyshare abgelehnt oder vom Browser wegen CORS blockiert). Bitte Schnellschätzung nutzen oder Werte manuell eintragen.',
+    )
+  }
+
   const result =
-    (await requestOverallStats(parsed.installationId, `Token ${parsed.shareToken}`)) ??
-    (await requestOverallStats(parsed.installationId, `Bearer ${parsed.shareToken}`))
+    (await requestOverallStats(parsed.installationId, `Bearer ${jwt}`)) ??
+    (await requestAnnualKwhStats(parsed.installationId, `Bearer ${jwt}`))
   if (!result) {
     throw new VrmFetchError(
-      'Direktabruf über den Share-Link hat nicht geklappt – Victron bietet dafür offiziell keine API, der Versuch war experimentell. Bitte Schnellschätzung nutzen (nur kWp nötig) oder Werte manuell aus dem VRM-Dashboard ablesen.',
+      'Token-Tausch hat geklappt, aber der Statistik-Abruf schlug fehl. Bitte Schnellschätzung nutzen oder Werte manuell eintragen.',
     )
   }
   return result
