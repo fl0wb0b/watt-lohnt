@@ -1,7 +1,10 @@
 import type { CarConfig } from './types'
 
 export type PresetId =
+  | 'tesla-model-3'
+  | 'tesla-model-3-performance'
   | 'tesla-model-y'
+  | 'tesla-model-y-performance'
   | 'vw-id4-pro'
   | 'hyundai-ioniq5'
   | 'bmw-x3-diesel'
@@ -52,8 +55,48 @@ const ICE_TAX_EXTRAS = {
  */
 export const CAR_PRESETS: CarPreset[] = [
   {
+    id: 'tesla-model-3',
+    label: 'Tesla Model 3 (Standard, RWD)',
+    description: 'BEV · WLTP-Verbrauch ca. 13,5 kWh/100km',
+    config: {
+      type: 'bev',
+      fuelType: 'petrol',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
+      purchasePrice: 39990,
+      subsidy: 0,
+      leaseMonthlyRate: 389,
+      insurancePerYear: 900,
+      ...BEV_TAX,
+      ...BEV_EXTRAS,
+      maintenancePerYear: 380,
+      consumptionPer100km: 13.5,
+      annualDepreciationPercent: 16,
+    },
+  },
+  {
+    id: 'tesla-model-3-performance',
+    label: 'Tesla Model 3 Performance',
+    description: 'BEV · WLTP-Verbrauch ca. 16,5 kWh/100km · 460+ PS AWD',
+    config: {
+      type: 'bev',
+      fuelType: 'petrol',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
+      purchasePrice: 58490,
+      subsidy: 0,
+      leaseMonthlyRate: 579,
+      insurancePerYear: 1200,
+      ...BEV_TAX,
+      ...BEV_EXTRAS,
+      maintenancePerYear: 500,
+      consumptionPer100km: 16.5,
+      annualDepreciationPercent: 17,
+    },
+  },
+  {
     id: 'tesla-model-y',
-    label: 'Tesla Model Y (Heckantrieb)',
+    label: 'Tesla Model Y (Standard, RWD)',
     description: 'BEV · WLTP-Verbrauch ca. 14,5 kWh/100km',
     config: {
       type: 'bev',
@@ -69,6 +112,26 @@ export const CAR_PRESETS: CarPreset[] = [
       maintenancePerYear: 400,
       consumptionPer100km: 14.5,
       annualDepreciationPercent: 16,
+    },
+  },
+  {
+    id: 'tesla-model-y-performance',
+    label: 'Tesla Model Y Performance',
+    description: 'BEV · WLTP-Verbrauch ca. 16,5 kWh/100km · 460 PS AWD',
+    config: {
+      type: 'bev',
+      fuelType: 'petrol',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
+      purchasePrice: 61990,
+      subsidy: 0,
+      leaseMonthlyRate: 619,
+      insurancePerYear: 1250,
+      ...BEV_TAX,
+      ...BEV_EXTRAS,
+      maintenancePerYear: 520,
+      consumptionPer100km: 16.5,
+      annualDepreciationPercent: 17,
     },
   },
   {
