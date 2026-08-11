@@ -139,6 +139,7 @@ function App() {
             Lohnt sich das Elektroauto? Vergleich mit deinem Bestandsfahrzeug, unter
             Berücksichtigung deiner PV-Anlage.
           </p>
+          <p className="powered-by mt-1">powered by fL0wb0b</p>
         </div>
       </header>
 
@@ -405,8 +406,6 @@ function App() {
           Alle Berechnungen laufen lokal im Browser, es werden keine Daten an einen Server
           übertragen (außer beim optionalen VRM-Live-Abruf über den konfigurierten Proxy).
         </p>
-        {/* Wortlaut/Schreibweise exakt wie bei planer.fl0wb0b.com */}
-        <span className="font-medium text-slate-500 dark:text-slate-400">powered by fL0wb0b</span>
       </footer>
     </div>
   )
