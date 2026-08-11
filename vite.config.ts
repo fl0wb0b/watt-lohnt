@@ -3,8 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
+// Deployt auf GitHub Pages unter https://fl0wb0b.github.io/fl0wb0b/ – daher der base-Pfad.
 export default defineConfig({
+  base: '/fl0wb0b/',
   plugins: [
     react(),
     tailwindcss(),
@@ -19,8 +20,8 @@ export default defineConfig({
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: '/fl0wb0b/',
+        scope: '/fl0wb0b/',
         lang: 'de',
         icons: [
           {

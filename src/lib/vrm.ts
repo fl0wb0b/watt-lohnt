@@ -27,60 +27,31 @@ export function parseVrmLink(input: string): ParsedVrmLink | null {
 
 export class VrmFetchError extends Error {}
 
-const VRM_API_BASE = 'https://vrm.victronenergy.com/api/v2'
+/** Offizieller API-Host laut VRM-API-Doku (nicht vrm.victronenergy.com selbst). */
+const VRM_API_BASE = 'https://vrmapi.victronenergy.com/v2'
 
-/**
- * Ruft Jahres-PV-Ertrag und Verbrauch live über die VRM API v2 ab.
- *
- * WICHTIG: Victrons öffentliche Share-Links ("/installation/{id}/share/{token}") sind reine
- * Dashboard-Ansichten und keine browser-seitig aufrufbare API – ein Drittanbieter kann darüber
- * keine Daten abrufen (kein CORS/Auth vorgesehen). Für einen echten Live-Abruf braucht es einen
- * VRM Access Token (VRM → Preferences → Integrations → "Access tokens" → neuen Token erzeugen).
- * Schlägt der Abruf fehl (falscher/fehlender Token, CORS, Netzwerk), wird ein Fehler geworfen –
- * die UI fällt dann auf manuelle Eingabe zurück.
- */
-export async function fetchVrmAnnualStats(
+async function requestOverallStats(
   installationId: string,
-  accessToken: string,
-): Promise<VrmPvData> {
-  const url = `${VRM_API_BASE}/installations/${installationId}/overallstats`
-
+  authHeader: string,
+): Promise<VrmPvData | null> {
   let response: Response
   try {
-    response = await fetch(url, {
-      headers: {
-        'X-Authorization': `Token ${accessToken}`,
-        Accept: 'application/json',
-      },
+    response = await fetch(`${VRM_API_BASE}/installations/${installationId}/overallstats`, {
+      headers: { 'X-Authorization': authHeader, Accept: 'application/json' },
     })
   } catch {
-    throw new VrmFetchError(
-      'Live-Abruf fehlgeschlagen (Netzwerk/CORS). Victron erlaubt Browser-Zugriffe von fremden Seiten häufig nicht – bitte Werte manuell eintragen.',
-    )
+    return null // Netzwerk/CORS
   }
-
-  if (!response.ok) {
-    throw new VrmFetchError(
-      `VRM API antwortete mit Status ${response.status}. Access Token korrekt und für diese Installation gültig? Sonst bitte manuell eintragen.`,
-    )
-  }
+  if (!response.ok) return null
 
   const data = await response.json().catch(() => null)
   const records = data?.records?.this_year ?? data?.records?.total ?? data?.records
-
-  if (!records || typeof records !== 'object') {
-    throw new VrmFetchError('Unerwartetes Antwortformat der VRM API. Bitte Werte manuell eintragen.')
-  }
+  if (!records || typeof records !== 'object') return null
 
   const annualYieldKwh = pickFirstNumber(records, ['solar_yield', 'total_solar_yield', 'Pdc'])
   const consumption = pickFirstNumber(records, ['consumption', 'total_consumption'])
   const toGrid = pickFirstNumber(records, ['grid_history_to_grid', 'to_grid']) ?? 0
-
-  if (annualYieldKwh == null || consumption == null) {
-    throw new VrmFetchError(
-      'PV-Ertrag/Verbrauch nicht in der Antwort gefunden. Bitte Werte manuell eintragen.',
-    )
-  }
+  if (annualYieldKwh == null || consumption == null) return null
 
   const selfConsumedKwh = Math.max(0, annualYieldKwh - toGrid)
   const selfConsumptionShare = annualYieldKwh > 0 ? selfConsumedKwh / annualYieldKwh : 0
@@ -91,6 +62,48 @@ export async function fetchVrmAnnualStats(
     annualHouseholdConsumptionKwh: consumption,
     source: 'live',
   }
+}
+
+/**
+ * Ruft Jahres-PV-Ertrag und Verbrauch live über die VRM API v2 ab – mit persönlichem Access
+ * Token (VRM → Preferences → Integrations → "Access tokens").
+ */
+export async function fetchVrmAnnualStats(
+  installationId: string,
+  accessToken: string,
+): Promise<VrmPvData> {
+  const result =
+    (await requestOverallStats(installationId, `Token ${accessToken}`)) ??
+    (await requestOverallStats(installationId, `Bearer ${accessToken}`))
+  if (!result) {
+    throw new VrmFetchError(
+      'Live-Abruf mit Access Token fehlgeschlagen (Token ungültig, keine Berechtigung für diese Installation oder Netzwerk/CORS). Alternativ Schnellschätzung oder manuelle Eingabe nutzen.',
+    )
+  }
+  return result
+}
+
+/**
+ * EXPERIMENTELL: versucht, den Share-Hash aus einem öffentlichen VRM-Share-Link direkt als
+ * API-Berechtigung zu verwenden. Victron dokumentiert dafür keine öffentliche API – dieser Weg
+ * kann jederzeit funktionieren oder brechen. Schlägt er fehl, bleibt Schnellschätzung/manuelle
+ * Eingabe der zuverlässige Weg.
+ */
+export async function fetchVrmViaShareLink(parsed: ParsedVrmLink): Promise<VrmPvData> {
+  if (!parsed.shareToken) {
+    throw new VrmFetchError(
+      'Der Link enthält keinen Share-Teil (…/share/…). Bitte den vollständigen Share-Link aus VRM kopieren.',
+    )
+  }
+  const result =
+    (await requestOverallStats(parsed.installationId, `Token ${parsed.shareToken}`)) ??
+    (await requestOverallStats(parsed.installationId, `Bearer ${parsed.shareToken}`))
+  if (!result) {
+    throw new VrmFetchError(
+      'Direktabruf über den Share-Link hat nicht geklappt – Victron bietet dafür offiziell keine API, der Versuch war experimentell. Bitte Schnellschätzung nutzen (nur kWp nötig) oder Werte manuell aus dem VRM-Dashboard ablesen.',
+    )
+  }
+  return result
 }
 
 function pickFirstNumber(obj: Record<string, unknown>, keys: string[]): number | null {

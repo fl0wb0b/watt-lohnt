@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
 import type { VrmPvData } from '../lib/types'
-import { estimatePvFromSize, fetchVrmAnnualStats, parseVrmLink, VrmFetchError } from '../lib/vrm'
+import {
+  estimatePvFromSize,
+  fetchVrmAnnualStats,
+  fetchVrmViaShareLink,
+  parseVrmLink,
+  VrmFetchError,
+} from '../lib/vrm'
 import { NumberField } from './fields'
 
 type Mode = 'quick' | 'manual' | 'live'
@@ -45,14 +51,13 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
       setError('Kein gültiger VRM-Link bzw. keine Installations-ID erkannt.')
       return
     }
-    if (!accessToken.trim()) {
-      setError('Für den Live-Abruf wird ein VRM Access Token benötigt (siehe Hinweis unten).')
-      return
-    }
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchVrmAnnualStats(parsed.installationId, accessToken.trim())
+      // Mit Token: offizieller Weg. Ohne Token: experimenteller Direktversuch über den Share-Hash.
+      const data = accessToken.trim()
+        ? await fetchVrmAnnualStats(parsed.installationId, accessToken.trim())
+        : await fetchVrmViaShareLink(parsed)
       onChange(data)
     } catch (e) {
       setError(e instanceof VrmFetchError ? e.message : 'Unbekannter Fehler beim Live-Abruf.')
@@ -196,7 +201,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-300">VRM Access Token</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">
+              VRM Access Token{' '}
+              <span className="font-normal text-slate-400">(optional – ohne Token wird ein Direktabruf über den Share-Link versucht)</span>
+            </span>
             <input
               type="password"
               placeholder="VRM → Preferences → Integrations → Access tokens"
@@ -230,9 +238,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           )}
 
           <p className="text-xs text-slate-400">
-            Victron bietet für reine Share-Links keine öffentliche API – der Live-Abruf braucht
-            leider zwingend einen persönlichen Access Token. Wem das zu umständlich ist: die
-            Schnellschätzung liefert in 10 Sekunden brauchbare Werte.
+            Ohne Token wird versucht, den Share-Hash des Links direkt gegen die VRM-API zu
+            verwenden – das ist experimentell, da Victron dafür keine öffentliche API dokumentiert,
+            und kann jederzeit scheitern. Zuverlässig sind: Access Token (offizieller Weg),
+            Schnellschätzung (nur kWp nötig) oder manuelles Ablesen aus dem Dashboard.
           </p>
         </div>
       )}
