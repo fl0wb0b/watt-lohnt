@@ -92,6 +92,7 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                 onChange={(v) => set('leaseMonthlyRate', v)}
                 suffix="€/Monat"
                 step={10}
+                hint="Preset-Rate ist nur ein Vorschlag – aktuelles Leasingangebot eintragen"
               />
               <NumberField
                 label="Leasinglaufzeit"
@@ -104,7 +105,14 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
             </>
           ) : (
             <>
-              <NumberField label="Kaufpreis" value={car.purchasePrice} onChange={(v) => set('purchasePrice', v)} suffix="€" step={100} />
+              <NumberField
+                label="Kaufpreis"
+                value={car.purchasePrice}
+                onChange={(v) => set('purchasePrice', v)}
+                suffix="€"
+                step={100}
+                hint="Preset-Preis ist nur ein Vorschlag – Listenpreise ändern sich laufend, aktuellen Preis beim Hersteller/Händler prüfen"
+              />
               <NumberField label="Förderung / Umweltbonus" value={car.subsidy} onChange={(v) => set('subsidy', v)} suffix="€" step={100} />
               {car.financingType !== 'cash' && (
                 <>

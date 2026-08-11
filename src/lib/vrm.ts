@@ -129,3 +129,30 @@ export function estimatePvShareForEv(
   const reachableSurplus = currentlyFedIn * presenceFactor(profile)
   return Math.max(0, Math.min(1, reachableSurplus / evAnnualNeedKwh))
 }
+
+/**
+ * Schnellschätzung der PV-Kennzahlen aus der Anlagengröße – für alle, die ihre VRM-Werte nicht
+ * zur Hand haben. Jahresertrag = kWp × spezifischer Ertrag (Deutschland typischerweise
+ * ~950–1050 kWh/kWp je nach Lage/Ausrichtung). Der Eigenverbrauchsanteil ohne Speicher folgt
+ * einer einfachen Faustkurve über das Verhältnis Haushaltsverbrauch/Erzeugung (kleine Anlage →
+ * hoher Eigenverbrauch, große Anlage → viel Einspeisung); ein Heimspeicher hebt den Anteil
+ * deutlich an. Genauer sind immer die echten Werte aus dem VRM-Dashboard (manueller Modus).
+ */
+export function estimatePvFromSize(
+  kwp: number,
+  specificYieldKwhPerKwp: number,
+  annualHouseholdConsumptionKwh: number,
+  hasBatteryStorage: boolean,
+): VrmPvData {
+  const annualYieldKwh = Math.max(0, kwp * specificYieldKwhPerKwp)
+  let share =
+    annualYieldKwh > 0 ? 0.3 * Math.sqrt(annualHouseholdConsumptionKwh / annualYieldKwh) : 0
+  if (hasBatteryStorage) share += 0.3
+  share = Math.min(0.85, Math.max(0.1, share))
+  return {
+    annualYieldKwh: Math.round(annualYieldKwh),
+    selfConsumptionShare: share,
+    annualHouseholdConsumptionKwh,
+    source: 'manual',
+  }
+}
