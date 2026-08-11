@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Deployt auf GitHub Pages unter https://fl0wb0b.github.io/fl0wb0b/ – daher der base-Pfad.
+// Deployt auf GitHub Pages unter https://fl0wb0b.github.io/watt-lohnt/ – daher der base-Pfad.
 export default defineConfig({
-  base: '/fl0wb0b/',
+  base: '/watt-lohnt/',
   plugins: [
     react(),
     tailwindcss(),
@@ -13,15 +13,15 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'EV Rechner – Lohnt sich das E-Auto?',
-        short_name: 'EV Rechner',
+        name: 'Watt lohnt? – Lohnt sich das E-Auto?',
+        short_name: 'Watt lohnt?',
         description:
           'Vergleicht die Gesamtkosten von Elektroauto vs. Verbrenner unter Einbeziehung deiner PV-Anlage (Victron VRM).',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
-        start_url: '/fl0wb0b/',
-        scope: '/fl0wb0b/',
+        start_url: '/watt-lohnt/',
+        scope: '/watt-lohnt/',
         lang: 'de',
         icons: [
           {
