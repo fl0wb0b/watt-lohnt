@@ -20,6 +20,9 @@ interface VrmPanelProps {
 const inputClass =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
 
+/** Vorkonfigurierter, gehärteter CORS-Proxy (Cloudflare Worker). Nutzer können ihn im Feld überschreiben. */
+const DEFAULT_VRM_PROXY = 'https://vrm-proxy.kevin-t.workers.dev'
+
 export function VrmPanel({ value, onChange }: VrmPanelProps) {
   const [mode, setMode] = useState<Mode>('quick')
 
@@ -33,7 +36,9 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   const [link, setLink] = useState('')
   const [accessToken, setAccessToken] = useState('')
   const [proxyUrl, setProxyUrl] = useState(
-    () => (typeof localStorage !== 'undefined' && localStorage.getItem('vrmProxyUrl')) || '',
+    () =>
+      (typeof localStorage !== 'undefined' && localStorage.getItem('vrmProxyUrl')) ||
+      DEFAULT_VRM_PROXY,
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -212,19 +217,21 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-300">
-              Proxy-URL{' '}
-              <span className="font-normal text-slate-400">(nötig für Browser-Abruf – siehe Hinweis)</span>
-            </span>
+          <details className="text-xs text-slate-400">
+            <summary className="cursor-pointer select-none">Proxy-URL (vorkonfiguriert – normalerweise nichts ändern)</summary>
             <input
               type="text"
               placeholder="https://vrm-proxy.deinname.workers.dev"
-              className={inputClass}
+              className={`${inputClass} mt-1`}
               value={proxyUrl}
               onChange={(e) => updateProxyUrl(e.target.value)}
             />
-          </label>
+            <span className="mt-1 block">
+              Der Abruf läuft über einen kleinen CORS-Proxy (Victron blockiert direkte
+              Browser-Abrufe fremder Seiten). Ein gehärteter Worker ist bereits hinterlegt – nur
+              ändern, wenn du einen eigenen betreibst (Code im Repo: <code>workers/vrm-proxy.js</code>).
+            </span>
+          </details>
 
           <details className="text-xs text-slate-400">
             <summary className="cursor-pointer select-none">VRM Access Token (optional)</summary>

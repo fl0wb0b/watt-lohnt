@@ -2,51 +2,75 @@
  * Watt-lohnt VRM-Proxy – Cloudflare Worker
  * -----------------------------------------
  * Winziger Vermittler, der Anfragen der App an die Victron-VRM-API weiterreicht und die
- * Antwort mit offenen CORS-Headern zurückgibt. Nötig, weil Victrons API Browser-Aufrufe von
+ * Antwort mit passenden CORS-Headern zurückgibt. Nötig, weil Victrons API Browser-Aufrufe von
  * fremden Domains (z.B. GitHub Pages) per CORS blockiert – ein Server hat diese Sperre nicht.
  *
- * Reicht ausschließlich `/v2/...`-Pfade an https://vrmapi.victronenergy.com weiter; alles andere
- * wird abgelehnt. Es werden keine Daten gespeichert oder protokolliert.
+ * Gehärtet für den öffentlichen Einsatz:
+ *  - Nur eine kleine Allowlist an Pfaden wird weitergereicht (verifyshare / overallstats / stats).
+ *    Der Proxy kann also ausschließlich PV-Share-Statistiken lesen, nichts anderes.
+ *  - Nur Anfragen von den erlaubten Origins (die App selbst) werden mit CORS beantwortet, damit
+ *    fremde Webseiten den Worker nicht als offenen Relay für ihre eigene Quota-Nutzung missbrauchen.
+ *  - Es werden keine Daten gespeichert oder protokolliert.
  *
  * Deploy (kostenlos):
- *   1. Kostenloses Konto auf https://dash.cloudflare.com anlegen.
- *   2. Workers & Pages → "Create" → "Create Worker" → Namen vergeben (z.B. "vrm-proxy").
- *   3. Diesen Datei-Inhalt in den Editor einfügen, "Deploy" klicken.
- *   4. Die vergebene URL (z.B. https://vrm-proxy.DEINNAME.workers.dev) in der App im Feld
- *      "Proxy-URL" (Tab „VRM-Live") eintragen.
+ *   npx wrangler deploy workers/vrm-proxy.js --name vrm-proxy --compatibility-date 2024-01-01
+ *   (oder im Cloudflare-Dashboard: Workers & Pages → Create Worker → Inhalt einfügen → Deploy)
  *
- * Alternativ per CLI:  npx wrangler deploy workers/vrm-proxy.js --name vrm-proxy
+ * Eigene App-Domain? Dann unten ALLOWED_ORIGINS anpassen.
  */
 
 const UPSTREAM = 'https://vrmapi.victronenergy.com'
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,X-Authorization,Accept',
-  'Access-Control-Max-Age': '86400',
+const ALLOWED_ORIGINS = ['https://fl0wb0b.github.io']
+
+const ALLOWED_PATHS = [
+  /^\/v2\/auth\/verifyshare$/,
+  /^\/v2\/installations\/\d+\/overallstats$/,
+  /^\/v2\/installations\/\d+\/stats$/,
+]
+
+function originAllowed(origin) {
+  if (!origin) return false
+  if (ALLOWED_ORIGINS.includes(origin)) return true
+  return /^http:\/\/localhost(:\d+)?$/.test(origin)
+}
+
+function corsHeaders(origin) {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,X-Authorization,Accept',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  }
 }
 
 export default {
   async fetch(request) {
+    const origin = request.headers.get('Origin')
+
+    if (!originAllowed(origin)) {
+      return new Response('Forbidden origin.', { status: 403 })
+    }
+    const cors = corsHeaders(origin)
+
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: CORS })
+      return new Response(null, { status: 204, headers: cors })
     }
 
     const url = new URL(request.url)
-    if (!url.pathname.startsWith('/v2/')) {
-      return new Response(JSON.stringify({ error: 'Only /v2/* paths are proxied.' }), {
-        status: 400,
-        headers: { ...CORS, 'Content-Type': 'application/json' },
+    if (!ALLOWED_PATHS.some((re) => re.test(url.pathname))) {
+      return new Response(JSON.stringify({ error: 'Path not allowed.' }), {
+        status: 403,
+        headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
 
-    const init = { method: request.method, headers: {} }
+    const init = { method: request.method, headers: { Accept: 'application/json' } }
     const auth = request.headers.get('X-Authorization')
     if (auth) init.headers['X-Authorization'] = auth
     const contentType = request.headers.get('Content-Type')
     if (contentType) init.headers['Content-Type'] = contentType
-    init.headers['Accept'] = 'application/json'
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       init.body = await request.text()
     }
@@ -57,7 +81,7 @@ export default {
     } catch {
       return new Response(JSON.stringify({ error: 'Upstream request failed.' }), {
         status: 502,
-        headers: { ...CORS, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
 
@@ -65,7 +89,7 @@ export default {
     return new Response(body, {
       status: upstream.status,
       headers: {
-        ...CORS,
+        ...cors,
         'Content-Type': upstream.headers.get('Content-Type') || 'application/json',
       },
     })
