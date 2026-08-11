@@ -44,7 +44,7 @@ export function ChargingPanel({ value, onChange, result, isBev }: ChargingPanelP
           onChange={(v) => set('batteryCapacityKwh', v)}
           suffix="kWh"
           step={0.5}
-          hint="0 = kein Speicher. Puffert Mittags-Überschuss in die Ladezeit"
+          hint="0 = kein Speicher. Puffert Mittags-Überschuss und lädt damit abends auch das Auto"
         />
       </div>
 

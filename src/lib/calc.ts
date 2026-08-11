@@ -134,16 +134,18 @@ export function computeCarResult(
       outstandingBalancePerYear.push(0)
     }
   } else if (car.financingType === 'cash') {
-    upfrontCash = Math.max(0, car.purchasePrice - car.subsidy - tradeInValue)
+    // Darf negativ werden: übersteigt Inzahlungnahme/Förderung den Kaufpreis, ist der
+    // Überschuss eine ehrliche Gutschrift statt stillschweigend zu verfallen.
+    upfrontCash = car.purchasePrice - car.subsidy - tradeInValue
     financingCashPerYear = new Array(horizon).fill(0)
     financingInterestPerYear = new Array(horizon).fill(0)
     outstandingBalancePerYear = new Array(horizon).fill(0)
   } else {
-    // loan oder balloon
-    const financedAmount = Math.max(
-      0,
-      car.purchasePrice - car.subsidy - car.downPayment - tradeInValue,
-    )
+    // loan oder balloon: Es wird nur so viel sofort gezahlt, wie nach Abzug von Förderung und
+    // Inzahlungnahme wirklich nötig ist – eine zu hoch angesetzte Anzahlung erzeugt keine
+    // Phantomkosten, und ein Inzahlungnahme-Überschuss wird gutgeschrieben.
+    const base = car.purchasePrice - car.subsidy - tradeInValue
+    const financedAmount = Math.max(0, base - car.downPayment)
     const balloonAmount =
       car.financingType === 'balloon' ? (car.balloonPercent / 100) * car.purchasePrice : 0
     const schedule = amortizationSchedule(
@@ -152,7 +154,7 @@ export function computeCarResult(
       car.loanTermYears,
       balloonAmount,
     )
-    upfrontCash = car.downPayment
+    upfrontCash = base - financedAmount
 
     for (let y = 1; y <= horizon; y++) {
       if (y <= car.loanTermYears && y <= schedule.interestPerYear.length) {
