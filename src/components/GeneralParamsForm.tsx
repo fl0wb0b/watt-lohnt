@@ -8,6 +8,8 @@ interface GeneralParamsFormProps {
   onChange: (value: GeneralBase) => void
 }
 
+const PRICE_STAND = '11.08.2026'
+
 export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
   const set = <K extends keyof GeneralBase>(key: K, v: GeneralBase[K]) =>
     onChange({ ...value, [key]: v })
@@ -23,6 +25,12 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         step={0.5}
         hint="Auf Strom, Sprit, Versicherung, Steuer, Wartung"
       />
+
+      <div className="col-span-2 -mb-1 mt-1 text-xs text-slate-400">
+        Energiepreise – Richtwerte Stand {PRICE_STAND}. Strom- und Spritpreise schwanken
+        kurzfristig spürbar, bitte vor der Rechnung den tagesaktuellen Preis eintragen (z.B.
+        eigene Stromrechnung, ADAC/clever-tanken.de für Sprit).
+      </div>
       <NumberField
         label="Strompreis (Netzbezug)"
         value={value.gridElectricityPricePerKwh}
@@ -44,7 +52,6 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         onChange={(v) => set('dieselPricePerLiter', v)}
         suffix="€/l"
         step={0.01}
-        hint="Richtwert – aktuellen Preis z.B. bei ADAC/clever-tanken.de prüfen"
       />
       <NumberField
         label="Benzinpreis (Super E10)"
@@ -52,7 +59,35 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         onChange={(v) => set('petrolPricePerLiter', v)}
         suffix="€/l"
         step={0.01}
-        hint="Richtwert – aktuellen Preis z.B. bei ADAC/clever-tanken.de prüfen"
+      />
+      <NumberField
+        label="Ladeverluste"
+        value={value.chargingLossPercent}
+        onChange={(v) => set('chargingLossPercent', v)}
+        suffix="%"
+        step={1}
+        hint="AC-Laden zuhause verliert real ca. 8–12% ggü. Fahrzeugverbrauch"
+      />
+      <NumberField
+        label="Zusatzsteigerung fossile Kraftstoffe"
+        value={value.fuelCostInflationExtraPercent}
+        onChange={(v) => set('fuelCostInflationExtraPercent', v)}
+        suffix="%/Jahr"
+        step={0.5}
+        hint="Oben auf die allgemeine Kostensteigerung, wegen CO2-Bepreisung/EU-ETS2"
+      />
+
+      <div className="col-span-2 -mb-1 mt-1 text-xs text-slate-400">
+        Kapitalkosten (optional): berücksichtigt, dass eingesetztes Kapital sonst z.B. am
+        Kapitalmarkt Rendite bringen könnte. 0% = einfache nominale Kostenrechnung (Standard).
+      </div>
+      <NumberField
+        label="Kalkulationszins (Kapitalkosten)"
+        value={value.discountRatePercent}
+        onChange={(v) => set('discountRatePercent', v)}
+        suffix="%/Jahr"
+        step={0.5}
+        hint="0% = wie bisher undiskontiert; >0% diskontiert alle Zahlungen auf den heutigen Wert"
       />
     </div>
   )

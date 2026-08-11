@@ -40,19 +40,37 @@ npm run preview   # Build lokal testen
   Cashflow-Simulation (`src/lib/calc.ts#computeCarResult`). Der Verkaufserlös
   des Altfahrzeugs kann optional als Anzahlung/Sondertilgung für das neue
   Fahrzeug verwendet werden.
-- **Bestandsfahrzeug vs. neues Fahrzeug**: Presets für Tesla Model Y (BEV),
+- **Bestandsfahrzeug vs. neues Fahrzeug**: Presets für Tesla Model Y, VW ID.4
+  Pro, Hyundai Ioniq 5 (BEV, Verbrauchswerte orientiert an der EV Database),
   BMW X3 xDrive20d/20i (Verbrenner) sowie ein frei editierbares Custom-Fahrzeug
   (`src/lib/presets.ts`). Alle Preset-Werte sind Richtwerte und sollten an das
   konkrete Angebot angepasst werden. Die Wartungskosten-Vorbelegung (BEV
   spürbar niedriger als Verbrenner) orientiert sich an gängigen
   Kostenvergleichen (u.a. ADAC) – keine Wunderdinge, aber ein realistischer
   Ausgangspunkt.
+- **Wirtschaftliche Zusatzfaktoren, die das Ergebnis sonst verfälschen
+  würden**:
+  - **Kfz-Steuer-Befreiung ist befristet** (aktuell gesetzlich bis 2030/31):
+    ab wählbarem Jahr greift für BEV wieder eine (geschätzte) Steuer, statt
+    dauerhaft 0 € anzunehmen.
+  - **THG-Quote**: jährlicher Erlös aus dem Verkauf der THG-Prämie für
+    BEV-Halter (Richtwert ca. 100–350 €/Jahr), reduziert die laufenden Kosten.
+  - **Wallbox**: einmalige Anschaffungs-/Installationskosten fürs BEV (0,
+    falls schon vorhanden) – wird sonst leicht vergessen.
+  - **Ladeverluste**: AC-Laden zuhause verliert real ca. 8–12 % gegenüber dem
+    reinen Fahrzeugverbrauch – der tatsächliche Strombezug (PV+Netz) ist
+    entsprechend höher angesetzt.
+  - **CO2-Bepreisung**: fossile Kraftstoffe bekommen zusätzlich zur
+    allgemeinen Kostensteigerung einen eigenen Preisaufschlag pro Jahr
+    (BEHG/EU-ETS2), Strom nicht.
+  - **Kapitalkosten (optional)**: ein Kalkulationszins > 0 % diskontiert alle
+    Zahlungsströme auf den heutigen Wert – relevant, wenn das für ein Auto
+    eingesetzte Kapital sonst investiert würde. 0 % = klassische nominale
+    Betrachtung.
 - **Ergebnis**: Vergleich der kumulierten Nettoposition (tatsächliche
   Kassenausgänge + noch offene Finanzierungsschuld − geschätzter Restwert,
   bei Leasing kein Restwert) beider Pfade über den Betrachtungszeitraum,
-  inkl. Break-even-Jahr im Chart. Berechnungslogik in `src/lib/calc.ts`. Es
-  handelt sich um eine nominale Betrachtung ohne Diskontierung/Zinseszins auf
-  das eingesetzte Kapital.
+  inkl. Break-even-Jahr im Chart. Berechnungslogik in `src/lib/calc.ts`.
 
 ### Rechenlogik prüfen
 

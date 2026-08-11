@@ -154,7 +154,52 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
         }
       />
       <NumberField label="Versicherung" value={car.insurancePerYear} onChange={(v) => set('insurancePerYear', v)} suffix="€/Jahr" step={10} />
-      <NumberField label="Kfz-Steuer" value={car.taxPerYear} onChange={(v) => set('taxPerYear', v)} suffix="€/Jahr" step={10} />
+      <NumberField
+        label={car.type === 'bev' ? 'Kfz-Steuer (während Befreiung)' : 'Kfz-Steuer'}
+        value={car.taxPerYear}
+        onChange={(v) => set('taxPerYear', v)}
+        suffix="€/Jahr"
+        step={10}
+        hint={car.type === 'bev' ? 'Aktuell gesetzlich 0 € für BEV' : undefined}
+      />
+      {car.type === 'bev' && (
+        <>
+          <NumberField
+            label="Steuerbefreiung endet in"
+            value={car.taxExemptionYears}
+            onChange={(v) => set('taxExemptionYears', v)}
+            suffix="Jahren"
+            step={1}
+            hint="Aktuell gesetzlich befristet bis 2030/31 – bei langem Betrachtungszeitraum relevant"
+          />
+          <NumberField
+            label="Kfz-Steuer nach Befreiung"
+            value={car.postExemptionTaxPerYear}
+            onChange={(v) => set('postExemptionTaxPerYear', v)}
+            suffix="€/Jahr"
+            step={10}
+            hint="Schätzwert – zukünftige Regelung noch nicht final bekannt"
+          />
+          <NumberField
+            label="THG-Quoten-Erlös"
+            value={car.thgQuotePerYear}
+            onChange={(v) => set('thgQuotePerYear', v)}
+            suffix="€/Jahr"
+            step={10}
+            hint="Richtwert ca. 100–350 €/Jahr, Anbieter & Marktpreis schwanken"
+          />
+          {showPurchaseFields && (
+            <NumberField
+              label="Wallbox (Anschaffung & Installation)"
+              value={car.wallboxCost}
+              onChange={(v) => set('wallboxCost', v)}
+              suffix="€"
+              step={50}
+              hint="0, falls bereits vorhanden"
+            />
+          )}
+        </>
+      )}
       <NumberField
         label="Wartung & Reparaturen"
         value={car.maintenancePerYear}
@@ -163,7 +208,7 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
         step={10}
         hint={
           car.type === 'bev'
-            ? 'Studien (u.a. ADAC-Kostenvergleiche) zeigen im Schnitt spürbar geringere Werkstattkosten bei BEV: keine Ölwechsel, weniger Verschleißteile, weniger Bremsverschleiß durch Rekuperation.'
+            ? 'Studien (u.a. ADAC-Kostenvergleiche) zeigen im Schnitt spürbar geringere Werkstattkosten bei BEV (keine Ölwechsel, weniger Verschleißteile, weniger Bremsverschleiß durch Rekuperation) – dafür oft etwas höherer Reifenverschleiß durch Gewicht/Drehmoment.'
             : undefined
         }
       />

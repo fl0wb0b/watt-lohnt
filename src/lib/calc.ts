@@ -64,34 +64,46 @@ export function residualValue(
   return value0 * (1 - rate) ** years
 }
 
+/** Present-Value-Faktor für Jahr y bei gegebenem Kalkulationszins (0 = keine Diskontierung). */
+function discountFactor(discountRatePercent: number, y: number): number {
+  if (discountRatePercent === 0) return 1
+  return (1 + discountRatePercent / 100) ** -y
+}
+
 function fuelPricePerLiter(car: CarConfig, general: GeneralParams): number {
   return car.fuelType === 'diesel' ? general.dieselPricePerLiter : general.petrolPricePerLiter
 }
 
-function energyCostForYear(
-  car: CarConfig,
-  general: GeneralParams,
-  inflationFactor: number,
-): number {
+function energyCostForYear(car: CarConfig, general: GeneralParams, year: number): number {
+  const generalInflationFactor = (1 + general.costInflationPercent / 100) ** (year - 1)
   const kmFactor = car.annualKm / 100
+
   if (car.type === 'bev') {
-    const needKwh = kmFactor * car.consumptionPer100km
+    const rawNeedKwh = kmFactor * car.consumptionPer100km
+    const lossFactor = 1 + Math.max(0, general.chargingLossPercent) / 100
+    const needKwh = rawNeedKwh * lossFactor
     const pvShare = Math.max(0, Math.min(1, general.pvSelfConsumptionShareForEv))
     const pvKwh = needKwh * pvShare
     const gridKwh = needKwh - pvKwh
     return (
       (pvKwh * general.feedInTariffPerKwh + gridKwh * general.gridElectricityPricePerKwh) *
-      inflationFactor
+      generalInflationFactor
     )
   }
+
+  // Fossile Kraftstoffe verteuern sich zusätzlich zur allgemeinen Inflation (CO2-Bepreisung/EU-ETS2).
+  const fuelInflationFactor =
+    (1 + (general.costInflationPercent + general.fuelCostInflationExtraPercent) / 100) **
+    (year - 1)
   const needLiters = kmFactor * car.consumptionPer100km
-  return needLiters * fuelPricePerLiter(car, general) * inflationFactor
+  return needLiters * fuelPricePerLiter(car, general) * fuelInflationFactor
 }
 
 /**
  * Simuliert ein Fahrzeug über den Betrachtungszeitraum: tatsächliche Kassenzahlungen je Jahr
- * (Anzahlung/Sonderzahlung, laufende Kosten, Kredit-/Leasingraten, ggf. Ballon-Schlussrate) sowie
- * die daraus resultierende Nettoposition (Kassenausgänge + offene Finanzierungsschuld − Restwert).
+ * (Anzahlung/Sonderzahlung, Wallbox, laufende Kosten, THG-Erlös, Kredit-/Leasingraten, ggf.
+ * Ballon-Schlussrate) sowie die daraus resultierende Nettoposition (Kassenausgänge + offene
+ * Finanzierungsschuld − Restwert), optional abgezinst auf den heutigen Wert.
  *
  * @param tradeInValue Erlös aus dem Verkauf des Altfahrzeugs, der die Finanzierung mindert (nur beim Neuwagen relevant).
  * @param depreciationBasis Wert, auf dem die Restwert-Abschreibung basiert (Kaufpreis bei Neuwagen, aktueller Marktwert bei Bestandsfahrzeug). Bei Leasing wird kein Restwert gutgeschrieben.
@@ -162,6 +174,10 @@ export function computeCarResult(
     }
   }
 
+  if (car.type === 'bev') {
+    upfrontCash += Math.max(0, car.wallboxCost)
+  }
+
   const years: YearBreakdown[] = []
   const cumulative: number[] = [upfrontCash]
   const outstandingBalance: number[] = [0]
@@ -169,15 +185,28 @@ export function computeCarResult(
   for (let y = 1; y <= horizon; y++) {
     const inflationFactor = (1 + inflation) ** (y - 1)
     const insurance = car.insurancePerYear * inflationFactor
-    const tax = car.taxPerYear * inflationFactor
+    const taxExempt = car.type === 'bev' && y <= car.taxExemptionYears
+    const tax = (taxExempt ? car.taxPerYear : car.postExemptionTaxPerYear) * inflationFactor
     const maintenance = car.maintenancePerYear * inflationFactor
-    const energy = energyCostForYear(car, general, inflationFactor)
+    const energy = energyCostForYear(car, general, y)
     const financingCash = financingCashPerYear[y - 1] ?? 0
     const financingInterest = financingInterestPerYear[y - 1] ?? 0
-    const ongoingTotal = insurance + tax + maintenance + energy + financingCash
+    const thgIncome = car.type === 'bev' ? car.thgQuotePerYear : 0
+    const ongoingTotal = insurance + tax + maintenance + energy + financingCash - thgIncome
 
-    years.push({ year: y, insurance, tax, maintenance, energy, financingCash, financingInterest, ongoingTotal })
-    cumulative.push(cumulative[cumulative.length - 1] + ongoingTotal)
+    years.push({
+      year: y,
+      insurance,
+      tax,
+      maintenance,
+      energy,
+      financingCash,
+      financingInterest,
+      thgIncome,
+      ongoingTotal,
+    })
+    const df = discountFactor(general.discountRatePercent, y)
+    cumulative.push(cumulative[cumulative.length - 1] + ongoingTotal * df)
     outstandingBalance.push(outstandingBalancePerYear[y - 1] ?? 0)
   }
 
@@ -188,8 +217,8 @@ export function computeCarResult(
   )
   const totalCostAtHorizon =
     cumulative[cumulative.length - 1] +
-    outstandingBalance[outstandingBalance.length - 1] -
-    residualValueAtHorizon
+    outstandingBalance[outstandingBalance.length - 1] * discountFactor(general.discountRatePercent, horizon) -
+    residualValueAtHorizon * discountFactor(general.discountRatePercent, horizon)
 
   return {
     car,
@@ -202,12 +231,19 @@ export function computeCarResult(
   }
 }
 
-/** Nettoposition je Jahr: Kassenausgänge + offene Finanzierungsschuld − erzielbarer Restwert, wenn in genau diesem Jahr verkauft/abgelöst würde. */
-function netCumulativeByYear(result: CarResult, depreciationBasis: number): number[] {
+/** Nettoposition je Jahr: (ggf. abgezinste) Kassenausgänge + offene Finanzierungsschuld − erzielbarer Restwert, wenn in genau diesem Jahr verkauft/abgelöst würde. */
+function netCumulativeByYear(
+  result: CarResult,
+  depreciationBasis: number,
+  general: GeneralParams,
+): number[] {
   const isLease = result.car.financingType === 'lease'
   return result.cumulative.map((c, y) => {
-    const resale = isLease ? 0 : residualValue(depreciationBasis, result.car.annualDepreciationPercent, y)
-    return c + result.outstandingBalance[y] - resale
+    const resale = isLease
+      ? 0
+      : residualValue(depreciationBasis, result.car.annualDepreciationPercent, y)
+    const df = discountFactor(general.discountRatePercent, y)
+    return c + result.outstandingBalance[y] * df - resale * df
   })
 }
 
@@ -230,8 +266,8 @@ export function compareCars(
   const tradeInValue = useTradeIn ? oldCar.currentMarketValue : 0
   const newPath = computeCarResult(newCar, general, tradeInValue)
 
-  const oldCumulativeNet = netCumulativeByYear(oldPath, oldCar.currentMarketValue)
-  const newCumulativeNet = netCumulativeByYear(newPath, newCar.purchasePrice)
+  const oldCumulativeNet = netCumulativeByYear(oldPath, oldCar.currentMarketValue, general)
+  const newCumulativeNet = netCumulativeByYear(newPath, newCar.purchasePrice, general)
 
   let breakEvenYear: number | null = null
   for (let y = 1; y <= general.horizonYears; y++) {

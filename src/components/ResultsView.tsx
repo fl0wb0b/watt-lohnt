@@ -21,9 +21,10 @@ interface ResultsViewProps {
   result: ComparisonResult
   oldLabel: string
   newLabel: string
+  discountRatePercent: number
 }
 
-export function ResultsView({ result, oldLabel, newLabel }: ResultsViewProps) {
+export function ResultsView({ result, oldLabel, newLabel, discountRatePercent }: ResultsViewProps) {
   const { breakEvenYear, savingsAtHorizon, oldCumulativeNet, newCumulativeNet } = result
   const horizon = oldCumulativeNet.length - 1
 
@@ -95,9 +96,12 @@ export function ResultsView({ result, oldLabel, newLabel }: ResultsViewProps) {
       </div>
 
       <p className="text-xs text-slate-400">
-        Nettokosten = kumulierte Anschaffungs- und laufende Kosten abzüglich des geschätzten
-        Wiederverkaufswerts, wenn das jeweilige Fahrzeug in diesem Jahr verkauft würde. Ohne
-        Diskontierung/Zinseszins auf das eingesetzte Kapital – reine nominale Kostenbetrachtung.
+        Nettokosten = kumulierte Anschaffungs- und laufende Kosten (inkl. offener
+        Finanzierungsschuld) abzüglich des geschätzten Wiederverkaufswerts, wenn das jeweilige
+        Fahrzeug in diesem Jahr verkauft würde.{' '}
+        {discountRatePercent > 0
+          ? `Alle Zahlungsströme sind mit ${discountRatePercent}%/Jahr auf den heutigen Wert abgezinst (Kapitalwert-Vergleich).`
+          : 'Ohne Diskontierung/Kapitalkosten auf das eingesetzte Kapital – reine nominale Kostenbetrachtung (Kalkulationszins lässt sich oben auf 0% ändern).'}
       </p>
     </div>
   )

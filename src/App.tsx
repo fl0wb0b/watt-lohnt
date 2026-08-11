@@ -26,6 +26,9 @@ const initialGeneral: GeneralBase = {
   dieselPricePerLiter: 2.2,
   petrolPricePerLiter: 2.13,
   costInflationPercent: 2.5,
+  fuelCostInflationExtraPercent: 1,
+  chargingLossPercent: 10,
+  discountRatePercent: 0,
 }
 
 const initialVrm: VrmPvData = {
@@ -63,6 +66,10 @@ const initialOldCar: OldCarConfig = {
   leaseTermYears: 0,
   insurancePerYear: 700,
   taxPerYear: 130,
+  taxExemptionYears: 0,
+  postExemptionTaxPerYear: 130,
+  thgQuotePerYear: 0,
+  wallboxCost: 0,
   maintenancePerYear: 650,
   consumptionPer100km: 6.5,
   annualDepreciationPercent: 12,
@@ -206,7 +213,12 @@ function App() {
 
       <div className="mt-4">
         <Section title="Ergebnis" subtitle="Kumulierte Gesamtkosten im Vergleich">
-          <ResultsView result={comparison} oldLabel={oldCar.label} newLabel={newCar.label} />
+          <ResultsView
+            result={comparison}
+            oldLabel={oldCar.label}
+            newLabel={newCar.label}
+            discountRatePercent={general.discountRatePercent}
+          />
         </Section>
       </div>
 

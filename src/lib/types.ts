@@ -34,13 +34,22 @@ export interface CarConfig {
   leaseTermYears: number
 
   insurancePerYear: number
-  /** Kfz-Steuer pro Jahr. */
+  /** Kfz-Steuer pro Jahr, solange die Steuerbefreiung (falls BEV) noch läuft bzw. dauerhaft bei ICE. */
   taxPerYear: number
+  /** Nur BEV: nach wie vielen Jahren die Kfz-Steuerbefreiung endet (aktuell gesetzlich bis 2030/31 befristet). Sehr groß setzen = wirkt in der Praxis nie. */
+  taxExemptionYears: number
+  /** Nur BEV: geschätzte Kfz-Steuer NACH Ende der Befreiung. */
+  postExemptionTaxPerYear: number
   maintenancePerYear: number
   /** kWh/100km bei BEV, l/100km bei ICE. */
   consumptionPer100km: number
   /** Jährliche Wertminderung in % (exponentiell) für die Restwert-Schätzung. Bei Leasing irrelevant (kein Eigentum). */
   annualDepreciationPercent: number
+
+  /** Nur BEV: jährlicher Erlös aus dem Verkauf der THG-Quote. */
+  thgQuotePerYear: number
+  /** Nur BEV: einmalige Anschaffung/Installation einer Wallbox (0, falls bereits vorhanden). */
+  wallboxCost: number
 }
 
 export interface OldCarConfig extends CarConfig {
@@ -58,6 +67,16 @@ export interface GeneralParams {
   pvSelfConsumptionShareForEv: number
   /** Jährliche Kostensteigerung (Strom, Sprit, Versicherung, Steuer, Wartung) in %. */
   costInflationPercent: number
+  /** Zusätzliche jährliche Steigerung nur für fossile Kraftstoffe (CO2-Bepreisung/EU-ETS2), oben auf costInflationPercent. */
+  fuelCostInflationExtraPercent: number
+  /** Ladeverluste beim Laden zuhause (AC-Wandlung etc.) in %, erhöht den tatsächlichen Strombedarf über den Fahrzeugverbrauch hinaus. */
+  chargingLossPercent: number
+  /**
+   * Kalkulationszinssatz (Opportunitätskosten des eingesetzten Kapitals) in % p.a. 0 = nominale
+   * Betrachtung (Standard). >0 diskontiert alle Zahlungsströme auf den heutigen Wert (Kapitalwert-
+   * Vergleich) – relevant, wenn das Geld sonst z.B. am Kapitalmarkt investiert würde.
+   */
+  discountRatePercent: number
 }
 
 export interface YearBreakdown {
@@ -70,6 +89,8 @@ export interface YearBreakdown {
   financingCash: number
   /** Davon Zinsanteil (nur informativ). */
   financingInterest: number
+  /** THG-Quoten-Erlös (negativ auf die Kosten wirkend), bereits in ongoingTotal enthalten. */
+  thgIncome: number
   ongoingTotal: number
 }
 
