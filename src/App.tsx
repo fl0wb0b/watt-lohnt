@@ -2,18 +2,18 @@ import { useMemo, useState } from 'react'
 import { Car, Sun, Zap } from 'lucide-react'
 import { CarForm } from './components/CarForm'
 import { GeneralParamsForm } from './components/GeneralParamsForm'
-import { PresencePanel } from './components/PresencePanel'
+import { ChargingPanel } from './components/ChargingPanel'
 import { ResultsView } from './components/ResultsView'
 import { Section, NumberField } from './components/fields'
 import { VrmPanel } from './components/VrmPanel'
 import { compareCars } from './lib/calc'
 import { CAR_PRESETS, getPreset, type PresetId } from './lib/presets'
-import { estimatePvShareForEv } from './lib/vrm'
+import { simulateSolarCharging } from './lib/simulate'
 import type {
   CarConfig,
+  ChargingSimConfig,
   GeneralParams,
   OldCarConfig,
-  PresenceProfile,
   VrmPvData,
 } from './lib/types'
 
@@ -29,6 +29,7 @@ const initialGeneral: GeneralBase = {
   fuelCostInflationExtraPercent: 1,
   chargingLossPercent: 10,
   discountRatePercent: 0,
+  uncertaintyPercent: 10,
 }
 
 const initialVrm: VrmPvData = {
@@ -38,14 +39,10 @@ const initialVrm: VrmPvData = {
   source: 'manual',
 }
 
-const initialPresence: PresenceProfile = {
-  mon: false,
-  tue: false,
-  wed: false,
-  thu: false,
-  fri: false,
-  sat: true,
-  sun: true,
+const initialCharging: ChargingSimConfig = {
+  earliestChargeHour: 18,
+  batteryCapacityKwh: 0,
+  maxChargePowerKw: 11,
 }
 
 const initialOldCar: OldCarConfig = {
@@ -54,6 +51,8 @@ const initialOldCar: OldCarConfig = {
   type: 'ice',
   fuelType: 'diesel',
   annualKm: 14000,
+  ageYears: 8,
+  odometerKm: 120000,
   financingType: 'cash',
   purchasePrice: 0,
   subsidy: 0,
@@ -79,7 +78,7 @@ const initialOldCar: OldCarConfig = {
 function App() {
   const [general, setGeneral] = useState<GeneralBase>(initialGeneral)
   const [vrm, setVrm] = useState<VrmPvData>(initialVrm)
-  const [presence, setPresence] = useState<PresenceProfile>(initialPresence)
+  const [charging, setCharging] = useState<ChargingSimConfig>(initialCharging)
   const [oldCar, setOldCar] = useState<OldCarConfig>(initialOldCar)
   const [useTradeIn, setUseTradeIn] = useState(true)
   const [presetId, setPresetId] = useState<PresetId>('tesla-model-y')
@@ -97,7 +96,15 @@ function App() {
 
   const evAnnualNeedKwh =
     newCar.type === 'bev' ? (newCar.annualKm / 100) * newCar.consumptionPer100km : 0
-  const pvSelfConsumptionShareForEv = estimatePvShareForEv(vrm, evAnnualNeedKwh, presence)
+
+  const chargingSim = useMemo(
+    () =>
+      newCar.type === 'bev'
+        ? simulateSolarCharging(vrm, evAnnualNeedKwh, general.chargingLossPercent, charging)
+        : null,
+    [vrm, evAnnualNeedKwh, general.chargingLossPercent, charging, newCar.type],
+  )
+  const pvSelfConsumptionShareForEv = chargingSim?.solarShare ?? 0
 
   const fullGeneral: GeneralParams = { ...general, pvSelfConsumptionShareForEv }
 
@@ -130,22 +137,18 @@ function App() {
         </Section>
 
         <Section
-          title="PV-Anlage (Victron VRM) & Anwesenheit"
-          subtitle="Bestimmt, wie viel EV-Ladestrom aus eigener Solarproduktion kommt"
+          title="PV-Anlage (Victron VRM) & Ladesimulation"
+          subtitle="Bestimmt per Simulation, wie viel EV-Ladestrom aus eigener Solarproduktion kommt"
           right={<Sun className="size-5 text-amber-500" />}
         >
           <VrmPanel value={vrm} onChange={setVrm} />
           <div className="my-4 border-t border-slate-200 dark:border-slate-800" />
-          <PresencePanel value={presence} onChange={setPresence} />
-          <p className="mt-3 rounded-md bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
-            Geschätzter PV-Deckungsanteil fürs Laden:{' '}
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-              {Math.round(pvSelfConsumptionShareForEv * 100)}%
-            </span>{' '}
-            {newCar.type !== 'bev'
-              ? '(neues Fahrzeug ist kein BEV – Wert wird nicht genutzt)'
-              : `– der Rest (${Math.round((1 - pvSelfConsumptionShareForEv) * 100)}%) wird zum Strompreis (Netzbezug) aus dem Netz geladen.`}
-          </p>
+          <ChargingPanel
+            value={charging}
+            onChange={setCharging}
+            result={chargingSim}
+            isBev={newCar.type === 'bev'}
+          />
         </Section>
 
         <Section
@@ -218,6 +221,7 @@ function App() {
             oldLabel={oldCar.label}
             newLabel={newCar.label}
             discountRatePercent={general.discountRatePercent}
+            uncertaintyPercent={general.uncertaintyPercent}
           />
         </Section>
       </div>

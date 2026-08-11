@@ -44,6 +44,26 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
         suffix="km/Jahr"
         step={500}
       />
+      {!showPurchaseFields && (
+        <>
+          <NumberField
+            label="Fahrzeugalter"
+            value={car.ageYears}
+            onChange={(v) => set('ageYears', v)}
+            suffix="Jahre"
+            step={1}
+            hint="Ab ~6 Jahren steigende Reparaturkosten"
+          />
+          <NumberField
+            label="Aktueller km-Stand"
+            value={car.odometerKm}
+            onChange={(v) => set('odometerKm', v)}
+            suffix="km"
+            step={5000}
+            hint="Ab ~100.000 km steigende Verschleißkosten"
+          />
+        </>
+      )}
       <NumberField
         label="Verbrauch"
         value={car.consumptionPer100km}

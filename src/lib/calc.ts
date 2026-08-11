@@ -187,7 +187,15 @@ export function computeCarResult(
     const insurance = car.insurancePerYear * inflationFactor
     const taxExempt = car.type === 'bev' && y <= car.taxExemptionYears
     const tax = (taxExempt ? car.taxPerYear : car.postExemptionTaxPerYear) * inflationFactor
-    const maintenance = car.maintenancePerYear * inflationFactor
+    // Reparaturen steigen mit Alter UND Laufleistung (Verschleiß):
+    //  - ab ~6 Jahren Fahrzeugalter rund +4% je weiterem Altersjahr,
+    //  - ab 100.000 km rund +5% je weiteren 25.000 km auf dem Tacho.
+    const ageInYear = car.ageYears + (y - 1)
+    const kmInYear = car.odometerKm + car.annualKm * (y - 1)
+    const ageRepairFactor = 1 + 0.04 * Math.max(0, ageInYear - 6)
+    const mileageRepairFactor = 1 + 0.05 * Math.max(0, (kmInYear - 100_000) / 25_000)
+    const maintenance =
+      car.maintenancePerYear * inflationFactor * ageRepairFactor * mileageRepairFactor
     const energy = energyCostForYear(car, general, y)
     const financingCash = financingCashPerYear[y - 1] ?? 0
     const financingInterest = financingInterestPerYear[y - 1] ?? 0

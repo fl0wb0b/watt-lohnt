@@ -10,6 +10,10 @@ export interface CarConfig {
   fuelType: FuelType
   /** Jährliche Fahrleistung DIESES Fahrzeugs. */
   annualKm: number
+  /** Aktuelles Fahrzeugalter in Jahren (0 = Neuwagen). Ältere Fahrzeuge verursachen mehr Reparaturen. */
+  ageYears: number
+  /** Aktueller km-Stand (Laufleistung bisher). Hohe Laufleistung = mehr Verschleiß/Reparaturen. */
+  odometerKm: number
 
   financingType: FinancingType
 
@@ -77,6 +81,8 @@ export interface GeneralParams {
    * Vergleich) – relevant, wenn das Geld sonst z.B. am Kapitalmarkt investiert würde.
    */
   discountRatePercent: number
+  /** Angenommene Ergebnis-Unschärfe in % (Eingaben sind Schätzungen) – nur für Anzeige/Toleranzband. */
+  uncertaintyPercent: number
 }
 
 export interface YearBreakdown {
@@ -127,9 +133,24 @@ export interface VrmPvData {
   source: 'live' | 'manual'
 }
 
-export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+export interface ChargingSimConfig {
+  /** Früheste Uhrzeit (Stunde 0..23), zu der das Auto angeschlossen wird und laden kann. */
+  earliestChargeHour: number
+  /** Nutzbare Heimspeicher-Kapazität in kWh (0 = kein Speicher). */
+  batteryCapacityKwh: number
+  /** Maximale Ladeleistung der Wallbox/des Autos in kW. */
+  maxChargePowerKw: number
+}
 
-export const WEEKDAYS: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-
-/** An welchen Wochentagen tagsüber (während der PV-Erzeugung) jemand zuhause ist und laden könnte. */
-export type PresenceProfile = Record<Weekday, boolean>
+export interface ChargingSimResult {
+  /** Anteil der jährlichen Auto-Ladeenergie, der aus PV (direkt + über den Speicher) kommt (0..1). */
+  solarShare: number
+  /** Jährlicher Ladebedarf des Autos inkl. Ladeverluste, in kWh. */
+  carAnnualKwh: number
+  /** Davon direkt aus PV-Überschuss, in kWh. */
+  fromPvDirectKwh: number
+  /** Davon aus dem Heimspeicher (PV-gespeist), in kWh. */
+  fromBatteryKwh: number
+  /** Davon aus dem Netz, in kWh. */
+  fromGridKwh: number
+}

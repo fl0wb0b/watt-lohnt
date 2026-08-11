@@ -89,6 +89,14 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         step={0.5}
         hint="0% = wie bisher undiskontiert; >0% diskontiert alle Zahlungen auf den heutigen Wert"
       />
+      <NumberField
+        label="Ergebnis-Unschärfe (Toleranz)"
+        value={value.uncertaintyPercent}
+        onChange={(v) => set('uncertaintyPercent', v)}
+        suffix="±%"
+        step={1}
+        hint="Man kann nicht alles exakt wissen – zeigt das Ergebnis als Bereich statt Scheingenauigkeit"
+      />
     </div>
   )
 }
