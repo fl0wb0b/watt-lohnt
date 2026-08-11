@@ -9,9 +9,20 @@ export interface CarPreset {
   config: Omit<CarConfig, 'id' | 'label'>
 }
 
+const COMMON_FINANCING = {
+  financingType: 'loan' as const,
+  downPayment: 0,
+  loanInterestRatePercent: 7.0,
+  loanTermYears: 6,
+  balloonPercent: 35,
+  leaseSpecialPayment: 3000,
+  leaseTermYears: 4,
+}
+
 /**
- * Richtwerte, keine Live-Preise. Grob orientiert an Preislisten/Verbrauchsangaben Stand 2025 –
- * bitte vor der Rechnung an eure tatsächlichen Angebote (Kaufpreis, Versicherung, Verbrauch) anpassen.
+ * Richtwerte, keine Live-Preise. Kaufpreise/Verbrauch grob orientiert an Preislisten Stand 2025,
+ * Kraftstoffpreise an ADAC-Tagesdurchschnitten Anfang August 2026 – bitte vor der Rechnung an
+ * eure tatsächlichen Angebote und aktuellen Preise anpassen.
  */
 export const CAR_PRESETS: CarPreset[] = [
   {
@@ -20,11 +31,12 @@ export const CAR_PRESETS: CarPreset[] = [
     description: 'BEV · WLTP-Verbrauch ca. 14,5 kWh/100km · kfz-steuerbefreit bis 2030/31',
     config: {
       type: 'bev',
+      fuelType: 'petrol',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
       purchasePrice: 44990,
       subsidy: 0,
-      downPayment: 0,
-      loanInterestRatePercent: 6.5,
-      loanTermYears: 6,
+      leaseMonthlyRate: 429,
       insurancePerYear: 950,
       taxPerYear: 0,
       maintenancePerYear: 400,
@@ -38,11 +50,12 @@ export const CAR_PRESETS: CarPreset[] = [
     description: 'Verbrenner · WLTP-Verbrauch ca. 6,0 l/100km',
     config: {
       type: 'ice',
+      fuelType: 'diesel',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
       purchasePrice: 58000,
       subsidy: 0,
-      downPayment: 0,
-      loanInterestRatePercent: 6.5,
-      loanTermYears: 6,
+      leaseMonthlyRate: 599,
       insurancePerYear: 1100,
       taxPerYear: 250,
       maintenancePerYear: 800,
@@ -56,11 +69,12 @@ export const CAR_PRESETS: CarPreset[] = [
     description: 'Verbrenner · WLTP-Verbrauch ca. 7,6 l/100km',
     config: {
       type: 'ice',
+      fuelType: 'petrol',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
       purchasePrice: 55500,
       subsidy: 0,
-      downPayment: 0,
-      loanInterestRatePercent: 6.5,
-      loanTermYears: 6,
+      leaseMonthlyRate: 569,
       insurancePerYear: 1050,
       taxPerYear: 180,
       maintenancePerYear: 750,
@@ -74,11 +88,12 @@ export const CAR_PRESETS: CarPreset[] = [
     description: 'Alle Werte frei editierbar',
     config: {
       type: 'bev',
+      fuelType: 'petrol',
+      annualKm: 14000,
+      ...COMMON_FINANCING,
       purchasePrice: 40000,
       subsidy: 0,
-      downPayment: 0,
-      loanInterestRatePercent: 6.5,
-      loanTermYears: 6,
+      leaseMonthlyRate: 400,
       insurancePerYear: 900,
       taxPerYear: 0,
       maintenancePerYear: 500,

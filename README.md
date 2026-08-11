@@ -20,20 +20,47 @@ npm run preview   # Build lokal testen
 
 ## Funktionsweise
 
-- **Allgemeine Parameter**: Jahresfahrleistung, Betrachtungszeitraum, Strom-
-  und Kraftstoffpreis, Einspeisevergütung, jährliche Kostensteigerung.
-- **PV-Anlage**: PV-Jahresertrag, Eigenverbrauchsanteil und Haushaltsverbrauch
-  bestimmen, wie viel der EV-Ladeenergie aus Solarüberschuss statt aus dem
-  Netz kommt (Rechnung in `src/lib/vrm.ts#estimatePvShareForEv`).
+- **Allgemeine Parameter**: Betrachtungszeitraum, Kostensteigerung p.a.,
+  Strompreis (Netzbezug), Einspeisevergütung, sowie getrennte Diesel-/
+  Benzinpreise (Richtwerte, Stand Anfang August 2026 – bitte an aktuelle/
+  lokale Preise anpassen, z.B. über ADAC oder clever-tanken.de).
+- **Jahresfahrleistung & Verbrauch pro Fahrzeug**: sowohl Bestandsfahrzeug
+  als auch neues Fahrzeug haben eigene Felder für km/Jahr und Verbrauch –
+  wichtig, wenn sich das Nutzungsverhalten unterscheiden soll.
+- **PV-Anlage + Anwesenheitsprofil**: PV-Jahresertrag, Eigenverbrauchsanteil
+  und Haushaltsverbrauch (aus VRM oder manuell) sowie ein Wochentage-Profil,
+  an welchen Tagen tagsüber jemand zuhause ist und laden kann. Nur der
+  Überschuss an Anwesenheitstagen gilt als für die Ladung nutzbar – der Rest
+  läuft (ohne Heimspeicher) real ins Netz und würde beim Laden aus dem
+  Netzstrom zum eingestellten Strompreis kommen (Rechnung in
+  `src/lib/vrm.ts#estimatePvShareForEv`). Für kleine Anlagen bzw. wenn PV
+  nicht reicht, wird der Rest automatisch zum Netz-Strompreis abgerechnet.
+- **Finanzierung des neuen Fahrzeugs**: Barkauf, Kredit, Ballonfinanzierung
+  (Schlussrate am Laufzeitende) oder Leasing – jeweils mit eigener
+  Cashflow-Simulation (`src/lib/calc.ts#computeCarResult`). Der Verkaufserlös
+  des Altfahrzeugs kann optional als Anzahlung/Sondertilgung für das neue
+  Fahrzeug verwendet werden.
 - **Bestandsfahrzeug vs. neues Fahrzeug**: Presets für Tesla Model Y (BEV),
   BMW X3 xDrive20d/20i (Verbrenner) sowie ein frei editierbares Custom-Fahrzeug
   (`src/lib/presets.ts`). Alle Preset-Werte sind Richtwerte und sollten an das
-  konkrete Angebot angepasst werden.
-- **Ergebnis**: Vergleich der kumulierten Nettokosten (laufende Kosten
-  abzüglich geschätztem Restwert) beider Pfade über den Betrachtungszeitraum,
-  inkl. Break-even-Jahr. Berechnungslogik in `src/lib/calc.ts`. Es handelt
-  sich um eine nominale Betrachtung ohne Diskontierung/Zinseszins auf das
-  eingesetzte Kapital.
+  konkrete Angebot angepasst werden. Die Wartungskosten-Vorbelegung (BEV
+  spürbar niedriger als Verbrenner) orientiert sich an gängigen
+  Kostenvergleichen (u.a. ADAC) – keine Wunderdinge, aber ein realistischer
+  Ausgangspunkt.
+- **Ergebnis**: Vergleich der kumulierten Nettoposition (tatsächliche
+  Kassenausgänge + noch offene Finanzierungsschuld − geschätzter Restwert,
+  bei Leasing kein Restwert) beider Pfade über den Betrachtungszeitraum,
+  inkl. Break-even-Jahr im Chart. Berechnungslogik in `src/lib/calc.ts`. Es
+  handelt sich um eine nominale Betrachtung ohne Diskontierung/Zinseszins auf
+  das eingesetzte Kapital.
+
+### Rechenlogik prüfen
+
+`npm run check:calc` führt `scripts/sanity-check.mts` aus – ein paar
+durchgerechnete Szenarien (Amortisation, Anwesenheits-/PV-Anteil, Kredit vs.
+Ballon vs. Leasing vs. Barkauf für dasselbe Fahrzeug) mit erwarteten
+Größenordnungen, um Regressionen bei Änderungen an der Rechenlogik früh zu
+bemerken.
 
 ## Victron VRM – Live-Abruf vs. manuelle Eingabe
 

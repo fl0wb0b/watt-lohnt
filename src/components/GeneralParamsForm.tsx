@@ -14,8 +14,15 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <NumberField label="Jahresfahrleistung" value={value.annualKm} onChange={(v) => set('annualKm', v)} suffix="km/Jahr" step={500} />
       <NumberField label="Betrachtungszeitraum" value={value.horizonYears} onChange={(v) => set('horizonYears', v)} suffix="Jahre" step={1} max={20} />
+      <NumberField
+        label="Kostensteigerung p.a."
+        value={value.costInflationPercent}
+        onChange={(v) => set('costInflationPercent', v)}
+        suffix="%/Jahr"
+        step={0.5}
+        hint="Auf Strom, Sprit, Versicherung, Steuer, Wartung"
+      />
       <NumberField
         label="Strompreis (Netzbezug)"
         value={value.gridElectricityPricePerKwh}
@@ -31,14 +38,21 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         step={0.01}
         hint="Opportunitätskosten für PV-Strom, der sonst eingespeist würde"
       />
-      <NumberField label="Kraftstoffpreis" value={value.fuelPricePerLiter} onChange={(v) => set('fuelPricePerLiter', v)} suffix="€/l" step={0.01} />
       <NumberField
-        label="Kostensteigerung p.a."
-        value={value.costInflationPercent}
-        onChange={(v) => set('costInflationPercent', v)}
-        suffix="%/Jahr"
-        step={0.5}
-        hint="Auf Strom, Sprit, Versicherung, Steuer, Wartung"
+        label="Dieselpreis"
+        value={value.dieselPricePerLiter}
+        onChange={(v) => set('dieselPricePerLiter', v)}
+        suffix="€/l"
+        step={0.01}
+        hint="Richtwert – aktuellen Preis z.B. bei ADAC/clever-tanken.de prüfen"
+      />
+      <NumberField
+        label="Benzinpreis (Super E10)"
+        value={value.petrolPricePerLiter}
+        onChange={(v) => set('petrolPricePerLiter', v)}
+        suffix="€/l"
+        step={0.01}
+        hint="Richtwert – aktuellen Preis z.B. bei ADAC/clever-tanken.de prüfen"
       />
     </div>
   )

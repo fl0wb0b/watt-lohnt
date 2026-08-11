@@ -1,4 +1,4 @@
-import type { VrmPvData } from './types'
+import { WEEKDAYS, type PresenceProfile, type VrmPvData } from './types'
 
 export interface ParsedVrmLink {
   installationId: string
@@ -103,13 +103,29 @@ function pickFirstNumber(obj: Record<string, unknown>, keys: string[]): number |
 }
 
 /**
- * Schätzt, welcher Anteil des jährlichen Auto-Ladebedarfs aus PV-Überschuss gedeckt werden
- * könnte: PV-Ertrag, der aktuell nicht vom Haushalt selbst verbraucht wird, abzüglich dem,
- * was bereits ins Netz eingespeist wird, steht potenziell fürs Laden zur Verfügung.
+ * Anteil der Woche (0..1, gleichgewichtet je Tag, da PV-Ertrag über die Wochentage ähnlich
+ * verteilt ist), an dem laut Anwesenheitsprofil tagsüber jemand zuhause ist und laden könnte.
  */
-export function estimatePvShareForEv(pv: VrmPvData, evAnnualNeedKwh: number): number {
+export function presenceFactor(profile: PresenceProfile): number {
+  const homeDays = WEEKDAYS.filter((d) => profile[d]).length
+  return homeDays / WEEKDAYS.length
+}
+
+/**
+ * Schätzt, welcher Anteil des jährlichen Auto-Ladebedarfs aus PV-Überschuss gedeckt werden
+ * könnte: PV-Ertrag, der aktuell nicht vom Haushalt selbst verbraucht wird (= tagsüber ins Netz
+ * eingespeister Überschuss), steht potenziell fürs Laden zur Verfügung – allerdings nur an den
+ * Tagen, an denen laut Anwesenheitsprofil tagsüber überhaupt jemand zuhause ist, um den Wagen
+ * anzuschließen. Ohne Heimspeicher/Auto als Puffer ist Überschuss an Abwesenheitstagen faktisch
+ * nicht nutzbar für das Laden.
+ */
+export function estimatePvShareForEv(
+  pv: VrmPvData,
+  evAnnualNeedKwh: number,
+  profile: PresenceProfile,
+): number {
   if (evAnnualNeedKwh <= 0) return 0
-  const currentlyFedIn = pv.annualYieldKwh * (1 - pv.selfConsumptionShare)
-  const availableForCar = Math.max(0, currentlyFedIn)
-  return Math.max(0, Math.min(1, availableForCar / evAnnualNeedKwh))
+  const currentlyFedIn = Math.max(0, pv.annualYieldKwh * (1 - pv.selfConsumptionShare))
+  const reachableSurplus = currentlyFedIn * presenceFactor(profile)
+  return Math.max(0, Math.min(1, reachableSurplus / evAnnualNeedKwh))
 }

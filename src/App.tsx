@@ -2,22 +2,29 @@ import { useMemo, useState } from 'react'
 import { Car, Sun, Zap } from 'lucide-react'
 import { CarForm } from './components/CarForm'
 import { GeneralParamsForm } from './components/GeneralParamsForm'
+import { PresencePanel } from './components/PresencePanel'
 import { ResultsView } from './components/ResultsView'
 import { Section, NumberField } from './components/fields'
 import { VrmPanel } from './components/VrmPanel'
 import { compareCars } from './lib/calc'
 import { CAR_PRESETS, getPreset, type PresetId } from './lib/presets'
 import { estimatePvShareForEv } from './lib/vrm'
-import type { CarConfig, GeneralParams, OldCarConfig, VrmPvData } from './lib/types'
+import type {
+  CarConfig,
+  GeneralParams,
+  OldCarConfig,
+  PresenceProfile,
+  VrmPvData,
+} from './lib/types'
 
 type GeneralBase = Omit<GeneralParams, 'pvSelfConsumptionShareForEv'>
 
 const initialGeneral: GeneralBase = {
-  annualKm: 14000,
   horizonYears: 8,
   gridElectricityPricePerKwh: 0.32,
   feedInTariffPerKwh: 0.08,
-  fuelPricePerLiter: 1.75,
+  dieselPricePerLiter: 2.2,
+  petrolPricePerLiter: 2.13,
   costInflationPercent: 2.5,
 }
 
@@ -28,15 +35,32 @@ const initialVrm: VrmPvData = {
   source: 'manual',
 }
 
+const initialPresence: PresenceProfile = {
+  mon: false,
+  tue: false,
+  wed: false,
+  thu: false,
+  fri: false,
+  sat: true,
+  sun: true,
+}
+
 const initialOldCar: OldCarConfig = {
   id: 'old',
   label: 'Bestandsfahrzeug (behalten)',
   type: 'ice',
+  fuelType: 'diesel',
+  annualKm: 14000,
+  financingType: 'cash',
   purchasePrice: 0,
   subsidy: 0,
   downPayment: 0,
   loanInterestRatePercent: 0,
   loanTermYears: 0,
+  balloonPercent: 0,
+  leaseMonthlyRate: 0,
+  leaseSpecialPayment: 0,
+  leaseTermYears: 0,
   insurancePerYear: 700,
   taxPerYear: 130,
   maintenancePerYear: 650,
@@ -48,7 +72,9 @@ const initialOldCar: OldCarConfig = {
 function App() {
   const [general, setGeneral] = useState<GeneralBase>(initialGeneral)
   const [vrm, setVrm] = useState<VrmPvData>(initialVrm)
+  const [presence, setPresence] = useState<PresenceProfile>(initialPresence)
   const [oldCar, setOldCar] = useState<OldCarConfig>(initialOldCar)
+  const [useTradeIn, setUseTradeIn] = useState(true)
   const [presetId, setPresetId] = useState<PresetId>('tesla-model-y')
   const [newCar, setNewCar] = useState<CarConfig>({
     id: 'new',
@@ -63,15 +89,15 @@ function App() {
   }
 
   const evAnnualNeedKwh =
-    newCar.type === 'bev' ? (general.annualKm / 100) * newCar.consumptionPer100km : 0
-  const pvSelfConsumptionShareForEv = estimatePvShareForEv(vrm, evAnnualNeedKwh)
+    newCar.type === 'bev' ? (newCar.annualKm / 100) * newCar.consumptionPer100km : 0
+  const pvSelfConsumptionShareForEv = estimatePvShareForEv(vrm, evAnnualNeedKwh, presence)
 
   const fullGeneral: GeneralParams = { ...general, pvSelfConsumptionShareForEv }
 
   const comparison = useMemo(
-    () => compareCars(oldCar, newCar, fullGeneral),
+    () => compareCars(oldCar, newCar, fullGeneral, useTradeIn),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [oldCar, newCar, fullGeneral],
+    [oldCar, newCar, fullGeneral, useTradeIn],
   )
 
   return (
@@ -92,22 +118,26 @@ function App() {
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="Allgemeine Parameter" subtitle="Fahrleistung, Energiepreise, Betrachtungszeitraum">
+        <Section title="Allgemeine Parameter" subtitle="Energiepreise, Betrachtungszeitraum, Kostensteigerung">
           <GeneralParamsForm value={general} onChange={setGeneral} />
         </Section>
 
         <Section
-          title="PV-Anlage (Victron VRM)"
+          title="PV-Anlage (Victron VRM) & Anwesenheit"
           subtitle="Bestimmt, wie viel EV-Ladestrom aus eigener Solarproduktion kommt"
           right={<Sun className="size-5 text-amber-500" />}
         >
           <VrmPanel value={vrm} onChange={setVrm} />
+          <div className="my-4 border-t border-slate-200 dark:border-slate-800" />
+          <PresencePanel value={presence} onChange={setPresence} />
           <p className="mt-3 rounded-md bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
             Geschätzter PV-Deckungsanteil fürs Laden:{' '}
             <span className="font-semibold text-slate-700 dark:text-slate-200">
               {Math.round(pvSelfConsumptionShareForEv * 100)}%
             </span>{' '}
-            {newCar.type !== 'bev' && '(neues Fahrzeug ist kein BEV – Wert wird nicht genutzt)'}
+            {newCar.type !== 'bev'
+              ? '(neues Fahrzeug ist kein BEV – Wert wird nicht genutzt)'
+              : `– der Rest (${Math.round((1 - pvSelfConsumptionShareForEv) * 100)}%) wird zum Strompreis (Netzbezug) aus dem Netz geladen.`}
           </p>
         </Section>
 
@@ -123,8 +153,16 @@ function App() {
               onChange={(v) => setOldCar({ ...oldCar, currentMarketValue: v })}
               suffix="€"
               step={100}
-              hint="Wird beim Wechsel-Szenario als Verkaufserlös gegen den Neupreis gerechnet"
             />
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={useTradeIn}
+                onChange={(e) => setUseTradeIn(e.target.checked)}
+                className="size-3.5 rounded border-slate-300"
+              />
+              Bei Fahrzeugwechsel verkaufen und Erlös als Anzahlung/Sondertilgung fürs neue Auto nutzen
+            </label>
           </div>
           <CarForm car={oldCar} onChange={(c) => setOldCar({ ...oldCar, ...c })} showPurchaseFields={false} />
         </Section>
