@@ -139,7 +139,9 @@ function App() {
             Lohnt sich das Elektroauto? Vergleich mit deinem Bestandsfahrzeug, unter
             Berücksichtigung deiner PV-Anlage.
           </p>
-          <p className="powered-by mt-1">powered by fL0wb0b</p>
+          <span className="powered-by">
+            <span className="powered-by__text">powered by fL0wb0b</span>
+          </span>
         </div>
       </header>
 
