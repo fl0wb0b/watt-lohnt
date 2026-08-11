@@ -13,6 +13,16 @@ if ('serviceWorker' in navigator) {
     reloaded = true
     window.location.reload()
   })
+
+  // Ein dauerhaft offener Tab prüft sonst nie auf Updates – deshalb regelmäßig und bei
+  // Tab-Fokus aktiv nach einer neuen Version suchen.
+  navigator.serviceWorker.ready.then((registration) => {
+    const check = () => registration.update().catch(() => {})
+    setInterval(check, 60_000)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check()
+    })
+  })
 }
 
 createRoot(document.getElementById('root')!).render(
