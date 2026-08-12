@@ -3,6 +3,12 @@ import { simulateSolarCharging } from '../src/lib/simulate'
 import { getPreset } from '../src/lib/presets'
 import type { ChargingSimConfig, GeneralParams, OldCarConfig, VrmPvData } from '../src/lib/types'
 
+const TESLA_FILL = {
+  annualKm: 14000, purchasePrice: 44990, insurancePerYear: 950, downPayment: 0,
+  loanInterestRatePercent: 7, loanTermYears: 6, balloonPercent: 35,
+  leaseMonthlyRate: 429, leaseSpecialPayment: 3000, leaseTermYears: 4,
+}
+
 function eur(n: number) {
   return n.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €'
 }
@@ -73,7 +79,7 @@ const BASE_OLD_CAR: OldCarConfig = {
 // --- 3b) PV-Strom fließt wirklich in die Kosten ein: Solaranteil 0% vs 98% muss die Energiekosten drastisch ändern.
 {
   const teslaPreset = getPreset('tesla-model-y')
-  const car = { id: 'new', label: 'Tesla', ...teslaPreset.config } // 14.000 km, 14,5 kWh/100km
+  const car = { id: 'new', label: 'Tesla', ...teslaPreset.config, ...TESLA_FILL } // 14.000 km, 14,5 kWh/100km
   const needKwh = (car.annualKm / 100) * car.consumptionPer100km * 1.1 // inkl. 10% Ladeverluste
   const g0 = { ...BASE_GENERAL, pvSelfConsumptionShareForEv: 0 }
   const g98 = { ...BASE_GENERAL, pvSelfConsumptionShareForEv: 0.98 }
@@ -92,7 +98,7 @@ const BASE_OLD_CAR: OldCarConfig = {
   const general = BASE_GENERAL
   const oldCar = BASE_OLD_CAR
   const teslaPreset = getPreset('tesla-model-y')
-  const newCar = { id: 'new', label: teslaPreset.label, ...teslaPreset.config, annualKm: 20000 }
+  const newCar = { id: 'new', label: teslaPreset.label, ...teslaPreset.config, ...TESLA_FILL, annualKm: 20000 }
 
   console.log('\n--- Full comparison: 20.000 km/Jahr, 50% PV-Deckung, Kredit ---')
   const cmp = compareCars(oldCar, newCar, general, true)
@@ -122,7 +128,7 @@ const BASE_OLD_CAR: OldCarConfig = {
   const teslaPreset = getPreset('tesla-model-y')
   console.log('\n--- Financing comparison (6y horizon, Tesla Model Y) ---')
   for (const financingType of ['cash', 'loan', 'balloon', 'lease'] as const) {
-    const car = { id: 'new', label: 'Tesla', ...teslaPreset.config, financingType }
+    const car = { id: 'new', label: 'Tesla', ...teslaPreset.config, ...TESLA_FILL, financingType }
     const result = computeCarResult(car, general, 0)
     const net = result.cumulative.at(-1)! + result.outstandingBalance.at(-1)! - result.residualValueAtHorizon
     console.log(
@@ -139,7 +145,7 @@ const BASE_OLD_CAR: OldCarConfig = {
 {
   const general = { ...BASE_GENERAL, horizonYears: 8 }
   const teslaPreset = getPreset('tesla-model-y')
-  const car = { id: 'new', label: 'Tesla', ...teslaPreset.config, taxExemptionYears: 3, postExemptionTaxPerYear: 140 }
+  const car = { id: 'new', label: 'Tesla', ...teslaPreset.config, ...TESLA_FILL, taxExemptionYears: 3, postExemptionTaxPerYear: 140 }
   const result = computeCarResult(car, general, 0)
   console.log('\n--- Tax exemption ends after year 3 ---')
   console.log('year3 tax (expect 0):', result.years[2].tax.toFixed(0))
@@ -151,7 +157,7 @@ const BASE_OLD_CAR: OldCarConfig = {
   const generalNominal = { ...BASE_GENERAL, horizonYears: 8 }
   const generalDiscounted = { ...BASE_GENERAL, horizonYears: 8, discountRatePercent: 5 }
   const teslaPreset = getPreset('tesla-model-y')
-  const newCar = { id: 'new', label: teslaPreset.label, ...teslaPreset.config }
+  const newCar = { id: 'new', label: teslaPreset.label, ...teslaPreset.config, ...TESLA_FILL }
   const nominal = compareCars(BASE_OLD_CAR, newCar, generalNominal, true)
   const discounted = compareCars(BASE_OLD_CAR, newCar, generalDiscounted, true)
   console.log('\n--- Discounting sanity (5% Kalkulationszins) ---')

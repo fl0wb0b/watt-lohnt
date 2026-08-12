@@ -28,7 +28,12 @@ const OLD: OldCarConfig = {
   annualDepreciationPercent: 12, currentMarketValue: 15000, expectedLifetimeKm: 300000, replacementCost: 12000,
 }
 
-const TESLA: CarConfig = { id: 'n', label: 'Tesla', ...getPreset('tesla-model-y').config }
+const TESLA_FILL = {
+  annualKm: 14000, purchasePrice: 44990, insurancePerYear: 950, downPayment: 0,
+  loanInterestRatePercent: 7, loanTermYears: 6, balloonPercent: 35,
+  leaseMonthlyRate: 429, leaseSpecialPayment: 3000, leaseTermYears: 4,
+}
+const TESLA: CarConfig = { id: 'n', label: 'Tesla', ...getPreset('tesla-model-y').config, ...TESLA_FILL }
 
 console.log('=== Run A) Richtungstest: Wenigfahrer vs. Vielfahrer ===')
 console.log('Erwartung: je mehr km, desto besser fürs EV (Spritkosten dominieren).')
