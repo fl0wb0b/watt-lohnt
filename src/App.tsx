@@ -274,14 +274,14 @@ function App() {
               placeholder="z.B. Schwacke/mobile.de prüfen"
             />
             <NumberField
-              label="Erwartete Gesamt-Laufleistung"
+              label="Lebensdauer des Fahrzeugs"
               value={oldCar.expectedLifetimeKm}
               onChange={(v) => setOldCar({ ...oldCar, expectedLifetimeKm: v })}
-              suffix="km"
+              suffix="km gesamt"
               step={10000}
               required
               placeholder="Diesel typ. 300.000–400.000"
-              hint="Danach ist Schluss: Ersatzkauf wird eingerechnet"
+              hint="Tacho-Endstand, bei dem das Auto wirtschaftlich am Ende ist (NICHT pro Jahr) – danach wird der Ersatzkauf eingerechnet"
             />
             <NumberField
               label="Ersatzbeschaffung bei Ausfall"
