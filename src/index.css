@@ -13,6 +13,76 @@ body {
   @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
 }
 
+/* ---------------------------------------------------------------------------
+   Diagramm-Rollen. Kategoriale Slots 1 (blau) und 2 (orange) aus der validierten
+   Palette – helle und dunkle Stufen sind eigenständig gewählt, kein automatisches
+   Umdrehen. Beide Sets bestehen Helligkeits-, Chroma-, CVD- und Kontrastprüfung
+   gegen die jeweilige Flächenfarbe.
+   --------------------------------------------------------------------------- */
+.viz {
+  --viz-surface: #ffffff;
+  --viz-s1: #2a78d6;
+  --viz-s2: #eb6834;
+  --viz-grid: #e2e8f0;
+  --viz-axis: #cbd5e1;
+  --viz-tick: #64748b;
+  --viz-annot: #94a3b8;
+  --viz-annot-chip: #f1f5f9;
+  --viz-label: #0f172a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .viz {
+    --viz-surface: #0f172a;
+    --viz-s1: #3987e5;
+    --viz-s2: #d95926;
+    --viz-grid: #1e293b;
+    --viz-axis: #334155;
+    --viz-tick: #94a3b8;
+    --viz-annot: #475569;
+    --viz-annot-chip: #1e293b;
+    --viz-label: #f1f5f9;
+  }
+}
+:root[data-theme='dark'] .viz {
+  --viz-surface: #0f172a;
+  --viz-s1: #3987e5;
+  --viz-s2: #d95926;
+  --viz-grid: #1e293b;
+  --viz-axis: #334155;
+  --viz-tick: #94a3b8;
+  --viz-annot: #475569;
+  --viz-annot-chip: #1e293b;
+  --viz-label: #f1f5f9;
+}
+
+.viz-s1-stroke { stroke: var(--viz-s1); }
+.viz-s2-stroke { stroke: var(--viz-s2); }
+.viz-s1-fill { fill: var(--viz-s1); }
+.viz-s2-fill { fill: var(--viz-s2); }
+.viz-s1-bg { background: var(--viz-s1); }
+.viz-s2-bg { background: var(--viz-s2); }
+/* 2px-Ring in Flächenfarbe: hält Punkte lesbar, wo Linien sich kreuzen */
+.viz-ring { stroke: var(--viz-surface); }
+.viz-grid { stroke: var(--viz-grid); }
+.viz-axis { stroke: var(--viz-axis); }
+.viz-crosshair { stroke: var(--viz-axis); }
+.viz-annot { stroke: var(--viz-annot); }
+.viz-annot-chip { fill: var(--viz-annot-chip); }
+.viz-annot-text {
+  fill: var(--viz-tick);
+  font-size: 10px;
+  font-weight: 500;
+}
+.viz-tick {
+  fill: var(--viz-tick);
+  font-size: 11px;
+}
+.viz-endlabel {
+  fill: var(--viz-label);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* "powered by fl0wb0b" – wilder Graffiti-Sprühtag wie beim Tesla
    Robotaxi/Cybercab-Wordmark: zackige Tag-Schrift, kippelige Schieflage,
    flackerndes Neonlicht statt braver Firmenschrift.
