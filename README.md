@@ -45,14 +45,17 @@ npm run preview   # Build lokal testen
   Cashflow-Simulation (`src/lib/calc.ts#computeCarResult`). Der Verkaufserlös
   des Altfahrzeugs kann optional als Anzahlung/Sondertilgung für das neue
   Fahrzeug verwendet werden.
-- **Bestandsfahrzeug vs. neues Fahrzeug**: Presets für Tesla Model Y, VW ID.4
-  Pro, Hyundai Ioniq 5 (BEV, Verbrauchswerte orientiert an der EV Database),
-  BMW X3 xDrive20d/20i (Verbrenner) sowie ein frei editierbares Custom-Fahrzeug
-  (`src/lib/presets.ts`). Alle Preset-Werte sind Richtwerte und sollten an das
-  konkrete Angebot angepasst werden. Die Wartungskosten-Vorbelegung (BEV
-  spürbar niedriger als Verbrenner) orientiert sich an gängigen
-  Kostenvergleichen (u.a. ADAC) – keine Wunderdinge, aber ein realistischer
-  Ausgangspunkt.
+- **Bestandsfahrzeug vs. neues Fahrzeug**: 12 Presets mit recherchierten
+  2026er-Listenpreisen und WLTP-Verbräuchen (`src/lib/presets.ts`) – Tesla
+  Model 3/Y (Standard & Performance), Leapmotor B05, XPeng G6, BYD Seal U,
+  Škoda Elroq, VW ID.4 Pro, Hyundai Ioniq 5, BMW X3 als Diesel und Benziner
+  sowie ein leeres Custom-Fahrzeug. Fahrzeugtechnische Daten (Preis, Verbrauch,
+  Kfz-Steuer, Wartung, Wertminderung) sind vorbelegt und editierbar;
+  persönliche bzw. angebotsabhängige Werte (Zins, Laufzeit, Anzahlung,
+  Leasingraten, Fahrleistung) bleiben bewusst leere Pflichtfelder – z.B. bietet
+  Tesla zeitweise 0% Finanzierung, eine 7%-Vorgabe wäre irreführend. Die
+  Wartungskosten-Vorbelegung (BEV spürbar niedriger als Verbrenner) orientiert
+  sich an gängigen Kostenvergleichen (u.a. ADAC).
 - **Wirtschaftliche Zusatzfaktoren, die das Ergebnis sonst verfälschen
   würden**:
   - **Kfz-Steuer-Befreiung ist befristet** (aktuell gesetzlich bis 2030/31):
