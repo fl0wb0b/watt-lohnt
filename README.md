@@ -45,17 +45,21 @@ npm run preview   # Build lokal testen
   Cashflow-Simulation (`src/lib/calc.ts#computeCarResult`). Der Verkaufserlös
   des Altfahrzeugs kann optional als Anzahlung/Sondertilgung für das neue
   Fahrzeug verwendet werden.
-- **Bestandsfahrzeug vs. neues Fahrzeug**: 12 Presets mit recherchierten
-  2026er-Listenpreisen und WLTP-Verbräuchen (`src/lib/presets.ts`) – Tesla
-  Model 3/Y (Standard & Performance), Leapmotor B05, XPeng G6, BYD Seal U,
-  Škoda Elroq, VW ID.4 Pro, Hyundai Ioniq 5, BMW X3 als Diesel und Benziner
-  sowie ein leeres Custom-Fahrzeug. Fahrzeugtechnische Daten (Preis, Verbrauch,
-  Kfz-Steuer, Wartung, Wertminderung) sind vorbelegt und editierbar;
-  persönliche bzw. angebotsabhängige Werte (Zins, Laufzeit, Anzahlung,
-  Leasingraten, Fahrleistung) bleiben bewusst leere Pflichtfelder – z.B. bietet
-  Tesla zeitweise 0% Finanzierung, eine 7%-Vorgabe wäre irreführend. Die
-  Wartungskosten-Vorbelegung (BEV spürbar niedriger als Verbrenner) orientiert
-  sich an gängigen Kostenvergleichen (u.a. ADAC).
+- **Bestandsfahrzeug vs. neues Fahrzeug**: 21 Presets mit recherchierten
+  2026er-Listenpreisen und WLTP-Verbräuchen (`src/lib/presets.ts`), gruppiert
+  nach Klasse – Kleinwagen (Dacia Spring, Renault 5, Leapmotor B05),
+  Kompaktklasse (MG4, Škoda Elroq, Kia EV3, Cupra Born, VW ID.3, Volvo EX30),
+  Mittelklasse/SUV (Tesla Model 3 Premium RWD/AWD/Performance, Model Y
+  Standard/Performance, BYD Seal U, Hyundai Ioniq 5, VW ID.4, XPeng G6),
+  Verbrenner (BMW X3 als Benziner und Diesel) sowie ein leeres
+  Custom-Fahrzeug. Fahrzeugtechnische Daten (Preis, Verbrauch, Kfz-Steuer,
+  Wartung, Wertminderung) sind vorbelegt und editierbar; persönliche bzw.
+  angebotsabhängige Werte (Zins, Laufzeit, Anzahlung, Leasingraten,
+  Fahrleistung) bleiben bewusst leere Pflichtfelder – z.B. bietet Tesla
+  zeitweise 0% Finanzierung, eine 7%-Vorgabe wäre irreführend. Beim
+  Förderungs-Feld weist die App auf die E-Auto-Prämie 2026 hin (1.500–6.000 €
+  einkommensabhängig). Preise ändern sich mehrmals im Jahr – vor der
+  Entscheidung im Konfigurator gegenprüfen.
 - **Wirtschaftliche Zusatzfaktoren, die das Ergebnis sonst verfälschen
   würden**:
   - **Kfz-Steuer-Befreiung ist befristet** (aktuell gesetzlich bis 2030/31):

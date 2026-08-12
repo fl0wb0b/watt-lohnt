@@ -148,7 +148,18 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                 placeholder="dein Angebotspreis"
                 hint="Aktuellen Preis aus deinem Angebot/Konfigurator eintragen – Listenpreis des Presets steht oben als Anhalt"
               />
-              <NumberField label="Förderung / Umweltbonus" value={car.subsidy} onChange={(v) => set('subsidy', v)} suffix="€" step={100} />
+              <NumberField
+                label="Förderung / Umweltbonus"
+                value={car.subsidy}
+                onChange={(v) => set('subsidy', v)}
+                suffix="€"
+                step={100}
+                hint={
+                  car.type === 'bev'
+                    ? 'E-Auto-Prämie 2026: 1.500–6.000 € je nach zu versteuerndem Haushaltseinkommen (max. 80.000 €, +5.000 € je Kind), zzgl. 500 € pro Kind. Nur Privatpersonen – eigenen Anspruch prüfen.'
+                    : undefined
+                }
+              />
               {car.financingType !== 'cash' && (
                 <>
                   <NumberField label="Anzahlung" value={car.downPayment} onChange={(v) => set('downPayment', v)} suffix="€" step={100} required placeholder="z.B. 0" />
