@@ -93,7 +93,7 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           [
             ['quick', 'Schnellschätzung'],
             ['manual', 'Manuell (aus VRM)'],
-            ['live', 'VRM-Live (Token)'],
+            ['live', 'VRM-Link (live)'],
           ] as [Mode, string][]
         ).map(([m, label]) => (
           <button
