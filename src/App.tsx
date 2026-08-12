@@ -20,12 +20,15 @@ import type {
 
 type GeneralBase = Omit<GeneralParams, 'pvSelfConsumptionShareForEv'>
 
+// Persönliche/Markt-Werte starten LEER (NaN): Nutzer müssen ihre echten Zahlen eintragen,
+// sonst geht es nicht weiter – ein Ergebnis aus Beispielwerten wäre keine echte Entscheidung.
+// Modell-Parameter (Inflation, Ladeverluste, Toleranz, …) behalten sinnvolle Defaults.
 const initialGeneral: GeneralBase = {
-  horizonYears: 8,
-  gridElectricityPricePerKwh: 0.32,
-  feedInTariffPerKwh: 0.08,
-  dieselPricePerLiter: 2.2,
-  petrolPricePerLiter: 2.13,
+  horizonYears: NaN,
+  gridElectricityPricePerKwh: NaN,
+  feedInTariffPerKwh: NaN,
+  dieselPricePerLiter: NaN,
+  petrolPricePerLiter: NaN,
   costInflationPercent: 2.5,
   fuelCostInflationExtraPercent: 1,
   chargingLossPercent: 10,
@@ -34,15 +37,15 @@ const initialGeneral: GeneralBase = {
 }
 
 const initialVrm: VrmPvData = {
-  annualYieldKwh: 9000,
-  selfConsumptionShare: 0.3,
-  annualHouseholdConsumptionKwh: 4500,
+  annualYieldKwh: NaN,
+  selfConsumptionShare: NaN,
+  annualHouseholdConsumptionKwh: NaN,
   source: 'manual',
 }
 
 const initialCharging: ChargingSimConfig = {
-  earliestChargeHour: 18,
-  batteryCapacityKwh: 0,
+  earliestChargeHour: NaN,
+  batteryCapacityKwh: NaN,
   maxChargePowerKw: 11,
 }
 
@@ -51,9 +54,9 @@ const initialOldCar: OldCarConfig = {
   label: 'Bestandsfahrzeug (behalten)',
   type: 'ice',
   fuelType: 'diesel',
-  annualKm: 14000,
-  ageYears: 8,
-  odometerKm: 120000,
+  annualKm: NaN,
+  ageYears: NaN,
+  odometerKm: NaN,
   financingType: 'cash',
   purchasePrice: 0,
   subsidy: 0,
@@ -64,18 +67,18 @@ const initialOldCar: OldCarConfig = {
   leaseMonthlyRate: 0,
   leaseSpecialPayment: 0,
   leaseTermYears: 0,
-  insurancePerYear: 700,
-  taxPerYear: 130,
+  insurancePerYear: NaN,
+  taxPerYear: NaN,
   taxExemptionYears: 0,
-  postExemptionTaxPerYear: 130,
+  postExemptionTaxPerYear: 0,
   thgQuotePerYear: 0,
   wallboxCost: 0,
-  maintenancePerYear: 650,
-  consumptionPer100km: 6.5,
+  maintenancePerYear: NaN,
+  consumptionPer100km: NaN,
   annualDepreciationPercent: 12,
-  currentMarketValue: 15000,
-  expectedLifetimeKm: 300000,
-  replacementCost: 15000,
+  currentMarketValue: NaN,
+  expectedLifetimeKm: NaN,
+  replacementCost: NaN,
 }
 
 function App() {
@@ -97,14 +100,78 @@ function App() {
     setNewCar({ id: 'new', label: preset.label, ...preset.config })
   }
 
+  // --- Pflichtfeld-Prüfung: ohne echte Nutzerwerte kein Ergebnis (NaN = leer). ---
+  const filled = (...vals: number[]) => vals.every((v) => !Number.isNaN(v))
+
+  const generalMissing = [
+    [general.horizonYears, 'Betrachtungszeitraum'],
+    [general.gridElectricityPricePerKwh, 'Strompreis'],
+    [general.feedInTariffPerKwh, 'Einspeisevergütung'],
+    [general.dieselPricePerLiter, 'Dieselpreis'],
+    [general.petrolPricePerLiter, 'Benzinpreis'],
+  ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
+
+  const oldMissing = [
+    [oldCar.annualKm, 'Jahresfahrleistung'],
+    [oldCar.consumptionPer100km, 'Verbrauch'],
+    [oldCar.ageYears, 'Fahrzeugalter'],
+    [oldCar.odometerKm, 'km-Stand'],
+    [oldCar.currentMarketValue, 'Marktwert'],
+    [oldCar.insurancePerYear, 'Versicherung'],
+    [oldCar.taxPerYear, 'Kfz-Steuer'],
+    [oldCar.maintenancePerYear, 'Wartung'],
+    [oldCar.expectedLifetimeKm, 'Gesamt-Laufleistung'],
+    [oldCar.replacementCost, 'Ersatzbeschaffung'],
+  ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
+
+  const isLease = newCar.financingType === 'lease'
+  const newMissing = [
+    [newCar.annualKm, 'Jahresfahrleistung'],
+    [newCar.consumptionPer100km, 'Verbrauch'],
+    [newCar.insurancePerYear, 'Versicherung'],
+    ...(isLease
+      ? ([
+          [newCar.leaseMonthlyRate, 'Leasingrate'],
+          [newCar.leaseSpecialPayment, 'Sonderzahlung'],
+          [newCar.leaseTermYears, 'Leasinglaufzeit'],
+        ] as const)
+      : ([[newCar.purchasePrice, 'Kaufpreis']] as const)),
+    ...(newCar.financingType === 'loan' || newCar.financingType === 'balloon'
+      ? ([
+          [newCar.downPayment, 'Anzahlung'],
+          [newCar.loanInterestRatePercent, 'Zinssatz'],
+          [newCar.loanTermYears, 'Kreditlaufzeit'],
+        ] as const)
+      : []),
+    ...(newCar.financingType === 'balloon'
+      ? ([[newCar.balloonPercent, 'Schlussrate']] as const)
+      : []),
+    ...(newCar.type === 'bev' ? ([[newCar.maintenancePerYear, 'Wartung']] as const) : []),
+  ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
+
+  const pvMissing =
+    newCar.type !== 'bev'
+      ? []
+      : [
+          [vrm.annualYieldKwh, 'PV-Jahresertrag'],
+          [vrm.annualHouseholdConsumptionKwh, 'Haushaltsverbrauch'],
+          [charging.earliestChargeHour, 'Ladezeit'],
+          [charging.batteryCapacityKwh, 'Speicher-kWh'],
+          [charging.maxChargePowerKw, 'Ladeleistung'],
+        ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
+
+  const missingByStep = [generalMissing, oldMissing, newMissing, pvMissing]
+  const allComplete = missingByStep.every((m) => m.length === 0)
+
   const evAnnualNeedKwh =
     newCar.type === 'bev' ? (newCar.annualKm / 100) * newCar.consumptionPer100km : 0
 
   const chargingSim = useMemo(
     () =>
-      newCar.type === 'bev'
+      newCar.type === 'bev' && filled(vrm.annualYieldKwh, vrm.annualHouseholdConsumptionKwh, evAnnualNeedKwh, charging.earliestChargeHour, charging.batteryCapacityKwh, charging.maxChargePowerKw)
         ? simulateSolarCharging(vrm, evAnnualNeedKwh, general.chargingLossPercent, charging)
         : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [vrm, evAnnualNeedKwh, general.chargingLossPercent, charging, newCar.type],
   )
   const pvSelfConsumptionShareForEv = chargingSim?.solarShare ?? 0
@@ -112,9 +179,9 @@ function App() {
   const fullGeneral: GeneralParams = { ...general, pvSelfConsumptionShareForEv }
 
   const comparison = useMemo(
-    () => compareCars(oldCar, newCar, fullGeneral, useTradeIn),
+    () => (allComplete ? compareCars(oldCar, newCar, fullGeneral, useTradeIn) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [oldCar, newCar, fullGeneral, useTradeIn],
+    [oldCar, newCar, fullGeneral, useTradeIn, allComplete],
   )
 
   const steps = [
@@ -147,33 +214,41 @@ function App() {
         </div>
       </header>
 
-      {/* Schritt-Navigation */}
+      {/* Schritt-Navigation: grüner Haken erst, wenn alle Pflichtfelder des Schritts ausgefüllt sind */}
       <nav className="mb-5 flex items-center gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1.5 dark:bg-slate-800">
-        {steps.map((s, i) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setStep(i)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-              i === step
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <span
-              className={`flex size-5 items-center justify-center rounded-full text-xs ${
+        {steps.map((s, i) => {
+          const complete = i < 4 ? missingByStep[i].length === 0 : allComplete
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setStep(i)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 i === step
-                  ? 'bg-sky-600 text-white'
-                  : i < step
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-300 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
-              {i < step ? '✓' : i + 1}
-            </span>
-            {s.label}
-          </button>
-        ))}
+              <span
+                className={`flex size-5 items-center justify-center rounded-full text-xs ${
+                  complete
+                    ? 'bg-emerald-500 text-white'
+                    : i === step
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-300 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {complete ? '✓' : i + 1}
+              </span>
+              {s.label}
+              {i < 4 && missingByStep[i].length > 0 && (
+                <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                  {missingByStep[i].length}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </nav>
 
       {step === 0 && (
@@ -195,6 +270,8 @@ function App() {
               onChange={(v) => setOldCar({ ...oldCar, currentMarketValue: v })}
               suffix="€"
               step={100}
+              required
+              placeholder="z.B. Schwacke/mobile.de prüfen"
             />
             <NumberField
               label="Erwartete Gesamt-Laufleistung"
@@ -202,7 +279,9 @@ function App() {
               onChange={(v) => setOldCar({ ...oldCar, expectedLifetimeKm: v })}
               suffix="km"
               step={10000}
-              hint="Danach ist Schluss: Ersatzkauf wird eingerechnet (Diesel typ. 300–400.000)"
+              required
+              placeholder="Diesel typ. 300.000–400.000"
+              hint="Danach ist Schluss: Ersatzkauf wird eingerechnet"
             />
             <NumberField
               label="Ersatzbeschaffung bei Ausfall"
@@ -210,6 +289,8 @@ function App() {
               onChange={(v) => setOldCar({ ...oldCar, replacementCost: v })}
               suffix="€"
               step={500}
+              required
+              placeholder="Preis gleichwertiger Gebrauchter"
               hint="Gleichwertiger Gebrauchter (halbe Lebensdauer, ~6 Jahre)"
             />
           </div>
@@ -264,7 +345,7 @@ function App() {
           </p>
           <CarForm car={newCar} onChange={setNewCar} />
 
-          {newCar.financingType === 'lease' && (
+          {newCar.financingType === 'lease' && filled(newCar.leaseSpecialPayment, oldCar.currentMarketValue) && (
             <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
               <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                 Effektive Sofortkosten (Leasing)
@@ -303,7 +384,12 @@ function App() {
             </div>
           )}
 
-          {newCar.financingType !== 'lease' && (
+          {newCar.financingType !== 'lease' &&
+            filled(
+              newCar.purchasePrice,
+              oldCar.currentMarketValue,
+              newCar.financingType === 'cash' ? 0 : newCar.downPayment,
+            ) && (
             <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
               <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                 Effektive Anschaffungsrechnung
@@ -377,9 +463,47 @@ function App() {
         </Section>
       )}
 
-      {step === 4 && (
+      {step === 4 && !comparison && (
+        <Section
+          title="Noch nicht bereit"
+          subtitle="Das Ergebnis wird erst berechnet, wenn alle Pflichtfelder mit deinen echten Werten gefüllt sind"
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Ein Ergebnis aus Beispielwerten wäre keine Entscheidungsgrundlage. Diese Angaben
+              fehlen noch:
+            </p>
+            {missingByStep.map((missing, i) =>
+              missing.length === 0 ? null : (
+                <div
+                  key={steps[i].id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-amber-50 p-3 text-sm dark:bg-amber-950/30"
+                >
+                  <div>
+                    <span className="font-medium text-amber-800 dark:text-amber-300">
+                      {steps[i].label}:
+                    </span>{' '}
+                    <span className="text-amber-700 dark:text-amber-400">
+                      {missing.join(', ')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStep(i)}
+                    className="rounded-md bg-amber-500 px-3 py-1 text-xs font-medium text-white transition hover:bg-amber-400"
+                  >
+                    Ausfüllen →
+                  </button>
+                </div>
+              ),
+            )}
+          </div>
+        </Section>
+      )}
+
+      {step === 4 && comparison && (
         <div className="flex flex-col gap-4">
-          <Section title="Ergebnis" subtitle="Kumulierte Gesamtkosten im Vergleich">
+          <Section title="Ergebnis" subtitle="Kumulierte Gesamtkosten im Vergleich – berechnet aus deinen Werten">
             <ResultsView
               result={comparison}
               oldLabel={oldCar.label}
@@ -413,13 +537,23 @@ function App() {
           ← Zurück
         </button>
         {!isLast && (
-          <button
-            type="button"
-            onClick={() => setStep(step + 1)}
-            className="rounded-md bg-sky-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500"
-          >
-            {step === steps.length - 2 ? 'Zur Übersicht →' : 'Weiter →'}
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={() => setStep(step + 1)}
+              disabled={missingByStep[step].length > 0}
+              className="rounded-md bg-sky-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+            >
+              {step === steps.length - 2 ? 'Zur Übersicht →' : 'Weiter →'}
+            </button>
+            {missingByStep[step].length > 0 && (
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                Noch {missingByStep[step].length}{' '}
+                {missingByStep[step].length === 1 ? 'Pflichtfeld' : 'Pflichtfelder'}:{' '}
+                {missingByStep[step].join(', ')}
+              </span>
+            )}
+          </div>
         )}
       </div>
 

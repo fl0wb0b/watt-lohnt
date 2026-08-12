@@ -43,6 +43,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
         onChange={(v) => set('annualKm', v)}
         suffix="km/Jahr"
         step={500}
+        required
+        placeholder="deine echten km, z.B. 14.000"
       />
       {!showPurchaseFields && (
         <>
@@ -52,6 +54,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
             onChange={(v) => set('ageYears', v)}
             suffix="Jahre"
             step={1}
+            required
+            placeholder="z.B. 8"
             hint="Ab ~6 Jahren steigende Reparaturkosten"
           />
           <NumberField
@@ -60,6 +64,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
             onChange={(v) => set('odometerKm', v)}
             suffix="km"
             step={5000}
+            required
+            placeholder="vom Tacho ablesen"
             hint="Ab ~100.000 km steigende Verschleißkosten"
           />
         </>
@@ -70,6 +76,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
         onChange={(v) => set('consumptionPer100km', v)}
         suffix={car.type === 'bev' ? 'kWh/100km' : 'l/100km'}
         step={0.1}
+        required
+        placeholder={car.type === 'bev' ? 'z.B. 15' : 'dein realer Verbrauch'}
       />
 
       {showPurchaseFields && (
@@ -105,6 +113,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                 onChange={(v) => set('leaseSpecialPayment', v)}
                 suffix="€"
                 step={100}
+                required
+                placeholder="aus deinem Angebot"
               />
               <NumberField
                 label="Monatliche Leasingrate"
@@ -112,7 +122,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                 onChange={(v) => set('leaseMonthlyRate', v)}
                 suffix="€/Monat"
                 step={10}
-                hint="Preset-Rate ist nur ein Vorschlag – aktuelles Leasingangebot eintragen"
+                required
+                placeholder="aus deinem Angebot"
               />
               <NumberField
                 label="Leasinglaufzeit"
@@ -120,6 +131,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                 onChange={(v) => set('leaseTermYears', v)}
                 suffix="Jahre"
                 step={1}
+                required
+                placeholder="z.B. 4"
                 hint="Nach Ablauf: Annahme Weiterleasen zu ähnlichen Konditionen"
               />
             </>
@@ -131,18 +144,23 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                 onChange={(v) => set('purchasePrice', v)}
                 suffix="€"
                 step={100}
-                hint="Preset-Preis ist nur ein Vorschlag – Listenpreise ändern sich laufend, aktuellen Preis beim Hersteller/Händler prüfen"
+                required
+                placeholder="dein Angebotspreis"
+                hint="Aktuellen Preis aus deinem Angebot/Konfigurator eintragen – Listenpreis des Presets steht oben als Anhalt"
               />
               <NumberField label="Förderung / Umweltbonus" value={car.subsidy} onChange={(v) => set('subsidy', v)} suffix="€" step={100} />
               {car.financingType !== 'cash' && (
                 <>
-                  <NumberField label="Anzahlung" value={car.downPayment} onChange={(v) => set('downPayment', v)} suffix="€" step={100} />
+                  <NumberField label="Anzahlung" value={car.downPayment} onChange={(v) => set('downPayment', v)} suffix="€" step={100} required placeholder="z.B. 0" />
                   <NumberField
                     label="Zinssatz Finanzierung"
                     value={car.loanInterestRatePercent}
                     onChange={(v) => set('loanInterestRatePercent', v)}
                     suffix="% p.a."
                     step={0.1}
+                    required
+                    placeholder="aus DEINEM Angebot"
+                    hint="Hersteller-Aktionen beachten – z.B. bietet Tesla zeitweise 0%!"
                   />
                   <NumberField
                     label="Kreditlaufzeit"
@@ -150,6 +168,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                     onChange={(v) => set('loanTermYears', v)}
                     suffix="Jahre"
                     step={1}
+                    required
+                    placeholder="z.B. 6"
                   />
                   {car.financingType === 'balloon' && (
                     <NumberField
@@ -159,6 +179,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
                       suffix="% vom Kaufpreis"
                       step={1}
                       max={90}
+                      required
+                      placeholder="aus deinem Angebot"
                       hint="Fällig am Ende der Laufzeit"
                     />
                   )}
@@ -181,13 +203,15 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
             : 'Exponentielle Abschreibung für Restwert-Schätzung'
         }
       />
-      <NumberField label="Versicherung" value={car.insurancePerYear} onChange={(v) => set('insurancePerYear', v)} suffix="€/Jahr" step={10} />
+      <NumberField label="Versicherung" value={car.insurancePerYear} onChange={(v) => set('insurancePerYear', v)} suffix="€/Jahr" step={10} required placeholder="dein Beitrag" hint="Vollkasko-Jahresbeitrag – ggf. Angebot einholen" />
       <NumberField
         label={car.type === 'bev' ? 'Kfz-Steuer (während Befreiung)' : 'Kfz-Steuer'}
         value={car.taxPerYear}
         onChange={(v) => set('taxPerYear', v)}
         suffix="€/Jahr"
         step={10}
+        required
+        placeholder={car.type === 'bev' ? '0' : 'siehe Steuerbescheid'}
         hint={car.type === 'bev' ? 'Aktuell gesetzlich 0 € für BEV' : undefined}
       />
       {car.type === 'bev' && (
@@ -234,6 +258,8 @@ export function CarForm({ car, onChange, showPurchaseFields = true }: CarFormPro
         onChange={(v) => set('maintenancePerYear', v)}
         suffix="€/Jahr"
         step={10}
+        required
+        placeholder="Durchschnitt der letzten Jahre"
         hint={
           car.type === 'bev'
             ? 'Studien (u.a. ADAC-Kostenvergleiche) zeigen im Schnitt spürbar geringere Werkstattkosten bei BEV (keine Ölwechsel, weniger Verschleißteile, weniger Bremsverschleiß durch Rekuperation) – dafür oft etwas höherer Reifenverschleiß durch Gewicht/Drehmoment.'

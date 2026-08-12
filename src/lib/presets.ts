@@ -18,14 +18,19 @@ export interface CarPreset {
   config: Omit<CarConfig, 'id' | 'label'>
 }
 
+/**
+ * Persönliche/Markt-Werte werden bewusst NICHT vorbelegt (NaN = Pflichtfeld, leer):
+ * Zinsen, Laufzeiten, Preise und Versicherung hängen vom konkreten Angebot ab –
+ * z.B. bietet Tesla zeitweise 0% Finanzierung, da wäre eine 7%-Vorgabe irreführend.
+ */
 const COMMON_FINANCING = {
   financingType: 'loan' as const,
-  downPayment: 0,
-  loanInterestRatePercent: 7.0,
-  loanTermYears: 6,
-  balloonPercent: 35,
-  leaseSpecialPayment: 3000,
-  leaseTermYears: 4,
+  downPayment: NaN,
+  loanInterestRatePercent: NaN,
+  loanTermYears: NaN,
+  balloonPercent: NaN,
+  leaseSpecialPayment: NaN,
+  leaseTermYears: NaN,
 }
 
 /** Nur für BEV relevant: aktuell gesetzlich befristete Kfz-Steuerbefreiung (Stand 2026: bis 2030/31). */
@@ -61,14 +66,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 36990,
+      purchasePrice: NaN, // Listenpreis siehe description: 36990 €
       subsidy: 0,
-      leaseMonthlyRate: 349,
-      insurancePerYear: 900,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
       maintenancePerYear: 380,
@@ -83,14 +88,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 58490,
+      purchasePrice: NaN, // Listenpreis siehe description: 58490 €
       subsidy: 0,
-      leaseMonthlyRate: 509,
-      insurancePerYear: 1200,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
       maintenancePerYear: 500,
@@ -105,14 +110,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 39990,
+      purchasePrice: NaN, // Listenpreis siehe description: 39990 €
       subsidy: 0,
-      leaseMonthlyRate: 379,
-      insurancePerYear: 950,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
       maintenancePerYear: 400,
@@ -127,14 +132,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 61990,
+      purchasePrice: NaN, // Listenpreis siehe description: 61990 €
       subsidy: 0,
-      leaseMonthlyRate: 619,
-      insurancePerYear: 1250,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
       maintenancePerYear: 520,
@@ -149,14 +154,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 45950,
+      purchasePrice: NaN, // Listenpreis siehe description: 45950 €
       subsidy: 0,
-      leaseMonthlyRate: 419,
-      insurancePerYear: 900,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
       maintenancePerYear: 450,
@@ -171,14 +176,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 44900,
+      purchasePrice: NaN, // Listenpreis siehe description: 44900 €
       subsidy: 0,
-      leaseMonthlyRate: 409,
-      insurancePerYear: 920,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
       maintenancePerYear: 430,
@@ -193,14 +198,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'ice',
       fuelType: 'diesel',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 58000,
+      purchasePrice: NaN, // Listenpreis siehe description: 58000 €
       subsidy: 0,
-      leaseMonthlyRate: 599,
-      insurancePerYear: 1100,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       taxPerYear: 250,
       ...ICE_TAX_EXTRAS,
       maintenancePerYear: 800,
@@ -215,14 +220,14 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'ice',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 55500,
+      purchasePrice: NaN, // Listenpreis siehe description: 55500 €
       subsidy: 0,
-      leaseMonthlyRate: 569,
-      insurancePerYear: 1050,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       taxPerYear: 180,
       ...ICE_TAX_EXTRAS,
       maintenancePerYear: 750,
@@ -237,18 +242,18 @@ export const CAR_PRESETS: CarPreset[] = [
     config: {
       type: 'bev',
       fuelType: 'petrol',
-      annualKm: 14000,
+      annualKm: NaN,
       ageYears: 0,
       odometerKm: 0,
       ...COMMON_FINANCING,
-      purchasePrice: 40000,
+      purchasePrice: NaN, // Listenpreis siehe description: 40000 €
       subsidy: 0,
-      leaseMonthlyRate: 400,
-      insurancePerYear: 900,
+      leaseMonthlyRate: NaN,
+      insurancePerYear: NaN,
       ...BEV_TAX,
       ...BEV_EXTRAS,
-      maintenancePerYear: 500,
-      consumptionPer100km: 16,
+      maintenancePerYear: NaN,
+      consumptionPer100km: NaN,
       annualDepreciationPercent: 15,
     },
   },

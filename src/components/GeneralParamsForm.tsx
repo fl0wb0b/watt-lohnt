@@ -16,7 +16,7 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <NumberField label="Betrachtungszeitraum" value={value.horizonYears} onChange={(v) => set('horizonYears', v)} suffix="Jahre" step={1} max={20} />
+      <NumberField label="Betrachtungszeitraum" value={value.horizonYears} onChange={(v) => set('horizonYears', v)} suffix="Jahre" step={1} max={20} required placeholder="z.B. 8" />
       <NumberField
         label="Kostensteigerung p.a."
         value={value.costInflationPercent}
@@ -37,6 +37,9 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         onChange={(v) => set('gridElectricityPricePerKwh', v)}
         suffix="€/kWh"
         step={0.01}
+        required
+        placeholder="dein Tarif, z.B. 0,32"
+        hint="Steht auf deiner Stromrechnung"
       />
       <NumberField
         label="Einspeisevergütung"
@@ -44,6 +47,8 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         onChange={(v) => set('feedInTariffPerKwh', v)}
         suffix="€/kWh"
         step={0.01}
+        required
+        placeholder="z.B. 0,08"
         hint="Opportunitätskosten für PV-Strom, der sonst eingespeist würde"
       />
       <NumberField
@@ -52,6 +57,9 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         onChange={(v) => set('dieselPricePerLiter', v)}
         suffix="€/l"
         step={0.01}
+        required
+        placeholder="tagesaktuell, z.B. 2,20"
+        hint="Aktuellen Preis z.B. bei ADAC/clever-tanken.de nachsehen"
       />
       <NumberField
         label="Benzinpreis (Super E10)"
@@ -59,6 +67,9 @@ export function GeneralParamsForm({ value, onChange }: GeneralParamsFormProps) {
         onChange={(v) => set('petrolPricePerLiter', v)}
         suffix="€/l"
         step={0.01}
+        required
+        placeholder="tagesaktuell, z.B. 2,13"
+        hint="Aktuellen Preis z.B. bei ADAC/clever-tanken.de nachsehen"
       />
       <NumberField
         label="Ladeverluste"
