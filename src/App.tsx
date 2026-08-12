@@ -8,7 +8,7 @@ import { ResultsView } from './components/ResultsView'
 import { Section, NumberField } from './components/fields'
 import { VrmPanel } from './components/VrmPanel'
 import { compareCars } from './lib/calc'
-import { CAR_PRESETS, getPreset, type PresetId } from './lib/presets'
+import { CAR_PRESETS, PRESET_GROUPS, getPreset, type PresetId } from './lib/presets'
 import { simulateSolarCharging } from './lib/simulate'
 import type {
   CarConfig,
@@ -323,10 +323,14 @@ function App() {
                 value={presetId}
                 onChange={(e) => handlePresetChange(e.target.value as PresetId)}
               >
-                {CAR_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
+                {PRESET_GROUPS.map((g) => (
+                  <optgroup key={g} label={g}>
+                    {CAR_PRESETS.filter((p) => p.group === g).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
