@@ -130,6 +130,8 @@ export function computeCarResult(
   let financingInterestPerYear: number[] = []
   let outstandingBalancePerYear: number[] = []
   let effectiveDepreciationBasis = depreciationBasis
+  /** Schuld unmittelbar nach Vertragsabschluss – gehört schon in Jahr 0 zur Nettoposition. */
+  let initialDebt = 0
 
   if (car.financingType === 'lease') {
     // Verkaufserlös des Altwagens bleibt auch beim Leasing echtes Geld: er mindert die
@@ -156,6 +158,7 @@ export function computeCarResult(
     // Phantomkosten, und ein Inzahlungnahme-Überschuss wird gutgeschrieben.
     const base = car.purchasePrice - car.subsidy - tradeInValue
     const financedAmount = Math.max(0, base - car.downPayment)
+    initialDebt = financedAmount
     const balloonAmount =
       car.financingType === 'balloon' ? (car.balloonPercent / 100) * car.purchasePrice : 0
     const schedule = amortizationSchedule(
@@ -192,7 +195,7 @@ export function computeCarResult(
 
   const years: YearBreakdown[] = []
   const cumulative: number[] = [upfrontCash]
-  const outstandingBalance: number[] = [0]
+  const outstandingBalance: number[] = [initialDebt]
 
   // Verschleiß-/Restwertzustand des aktuell gehaltenen Fahrzeugs. Erreicht es seine
   // Lebensdauer, wird eine gebrauchte Ersatzbeschaffung fällig (Neustart des Zustands) –

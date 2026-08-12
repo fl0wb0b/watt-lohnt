@@ -112,3 +112,16 @@ console.log('\n=== E) Monotonie: mehr PV/Speicher darf nie schaden, mehr Zins ni
   console.log('12% Zins teurer als 2% Zins:', dearLoan.totalCostAtHorizon > cheapLoan.totalCostAtHorizon ? 'JA' : 'NEIN !!')
 }
 console.log('\nDone.')
+
+console.log('\n=== F) Jahr 0: aufgenommene Kreditschuld zählt sofort zur Nettoposition ===')
+{
+  // Ohne Anzahlung finanziert man den vollen Preis. Im Moment des Kaufs besitzt man das Auto
+  // (Restwert = Kaufpreis) UND schuldet den finanzierten Betrag – die Nettoposition darf
+  // deshalb nicht so aussehen, als wäre man um den Fahrzeugwert reicher geworden.
+  const car: CarConfig = { ...TESLA, financingType: 'loan', downPayment: 0, purchasePrice: 40000 }
+  const r = computeCarResult(car, G, 0)
+  const net0 = r.upfrontCash + r.outstandingBalance[0] - r.resaleByYear[0]
+  console.log(`Restschuld Jahr 0 (erwartet 40.000): ${eur(r.outstandingBalance[0])}`)
+  console.log(`Nettoposition Jahr 0 (erwartet ~Wallbox 1.500, NICHT −40.000): ${eur(net0)}`)
+  console.log('  → plausibel:', Math.abs(net0) < 5000 ? 'JA' : 'NEIN !!')
+}
