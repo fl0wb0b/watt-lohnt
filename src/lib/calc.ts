@@ -222,8 +222,10 @@ export function computeCarResult(
     }
 
     const insurance = car.insurancePerYear * inflationFactor
-    const taxExempt = car.type === 'bev' && y <= car.taxExemptionYears
-    const tax = (taxExempt ? car.taxPerYear : car.postExemptionTaxPerYear) * inflationFactor
+    // ICE zahlt immer taxPerYear; BEV zahlt taxPerYear (i.d.R. 0) bis zum Ende der Befreiung,
+    // danach die geschätzte postExemption-Steuer.
+    const afterBevExemption = car.type === 'bev' && y > car.taxExemptionYears
+    const tax = (afterBevExemption ? car.postExemptionTaxPerYear : car.taxPerYear) * inflationFactor
     // Reparaturen steigen mit Alter UND Laufleistung (Verschleiß):
     //  - ab ~6 Jahren Fahrzeugalter rund +4% je weiterem Altersjahr,
     //  - ab 100.000 km rund +5% je weiteren 25.000 km auf dem Tacho.

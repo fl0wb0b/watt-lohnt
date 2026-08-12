@@ -27,9 +27,9 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   const [mode, setMode] = useState<Mode>('quick')
 
   // Schnellschätzung
-  const [kwp, setKwp] = useState(9)
+  const [kwp, setKwp] = useState(NaN)
   const [specificYield, setSpecificYield] = useState(1000)
-  const [quickConsumption, setQuickConsumption] = useState(4500)
+  const [quickConsumption, setQuickConsumption] = useState(NaN)
 
   // Live-Abruf
   const [link, setLink] = useState('')
@@ -128,6 +128,8 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
               }}
               suffix="kWp"
               step={0.5}
+              required
+              placeholder="deine Anlage, z.B. 9"
             />
             <NumberField
               label="Spezifischer Ertrag"
@@ -149,16 +151,20 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
               }}
               suffix="kWh/Jahr"
               step={100}
+              required
+              placeholder="siehe Stromrechnung"
             />
             <p className="flex items-end pb-2 text-xs text-slate-400">
               Heimspeicher? Kapazität in kWh unten bei „Ladeverhalten &amp; Heimspeicher" angeben –
               er wird dort exakt mitsimuliert (inkl. Auto-Laden aus dem Speicher).
             </p>
           </div>
-          <p className="rounded-md bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
-            Geschätzt: <strong>{Math.round(value.annualYieldKwh).toLocaleString('de-DE')} kWh/Jahr</strong> Ertrag,{' '}
-            <strong>{Math.round(value.selfConsumptionShare * 100)}%</strong> Eigenverbrauch (ohne Auto).
-          </p>
+          {!Number.isNaN(value.annualYieldKwh) && (
+            <p className="rounded-md bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+              Geschätzt: <strong>{Math.round(value.annualYieldKwh).toLocaleString('de-DE')} kWh/Jahr</strong> Ertrag,{' '}
+              <strong>{Math.round(value.selfConsumptionShare * 100)}%</strong> Eigenverbrauch (ohne Auto).
+            </p>
+          )}
         </div>
       )}
 
@@ -174,6 +180,8 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
             onChange={(v) => setManual('annualYieldKwh', v)}
             suffix="kWh/Jahr"
             step={100}
+            required
+            placeholder="aus dem VRM-Dashboard"
           />
           <NumberField
             label="Eigenverbrauchsanteil"
@@ -190,6 +198,8 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
             onChange={(v) => setManual('annualHouseholdConsumptionKwh', v)}
             suffix="kWh/Jahr"
             step={100}
+            required
+            placeholder="aus dem VRM-Dashboard"
           />
         </div>
       )}

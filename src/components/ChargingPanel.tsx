@@ -23,11 +23,13 @@ export function ChargingPanel({ value, onChange, result, isBev }: ChargingPanelP
         <NumberField
           label="Früheste Ladezeit"
           value={value.earliestChargeHour}
-          onChange={(v) => set('earliestChargeHour', Math.max(0, Math.min(23, v)))}
+          onChange={(v) => set('earliestChargeHour', Number.isNaN(v) ? NaN : Math.max(0, Math.min(23, v)))}
           suffix="Uhr"
           step={1}
           min={0}
           max={23}
+          required
+          placeholder="z.B. 16"
           hint="Ab wann steckt das Auto (bis morgens)"
         />
         <NumberField
@@ -36,7 +38,9 @@ export function ChargingPanel({ value, onChange, result, isBev }: ChargingPanelP
           onChange={(v) => set('maxChargePowerKw', v)}
           suffix="kW"
           step={0.5}
-          hint="Wallbox/Onboard-Lader, z.B. 11"
+          required
+          placeholder="z.B. 11"
+          hint="Wallbox/Onboard-Lader"
         />
         <NumberField
           label="Heimspeicher-Kapazität"
@@ -44,7 +48,9 @@ export function ChargingPanel({ value, onChange, result, isBev }: ChargingPanelP
           onChange={(v) => set('batteryCapacityKwh', v)}
           suffix="kWh"
           step={0.5}
-          hint="0 = kein Speicher. Puffert Mittags-Überschuss und lädt damit abends auch das Auto"
+          required
+          placeholder="0 wenn keiner vorhanden"
+          hint="Puffert Mittags-Überschuss und lädt damit abends auch das Auto"
         />
       </div>
 
