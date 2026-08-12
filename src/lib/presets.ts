@@ -14,6 +14,8 @@ export type PresetId =
   | 'tesla-model-3-awd'
   | 'tesla-model-3-performance'
   | 'tesla-model-y'
+  | 'tesla-model-y-lr-rwd'
+  | 'tesla-model-y-lr-awd'
   | 'tesla-model-y-performance'
   | 'byd-seal-u'
   | 'vw-id4-pro'
@@ -185,9 +187,19 @@ export const CAR_PRESETS: CarPreset[] = [
     price: 47360, consumption: 16.5, insurance: 1200, maintenance: 500, depreciation: 17,
   }),
   bev({
-    id: 'tesla-model-y', label: 'Tesla Model Y Standard', group: 'Mittelklasse & SUV (BEV)',
-    description: 'BEV · 13,1 kWh/100km · Listenpreis 10/2025: ab 39.990 €',
+    id: 'tesla-model-y', label: 'Tesla Model Y Standard (RWD)', group: 'Mittelklasse & SUV (BEV)',
+    description: 'BEV · 13,1 kWh/100km · Basisversion (Juniper) · Listenpreis 2026: ab 39.990 €',
     price: 39990, consumption: 13.1, insurance: 950, maintenance: 400, depreciation: 16,
+  }),
+  bev({
+    id: 'tesla-model-y-lr-rwd', label: 'Tesla Model Y Long Range RWD', group: 'Mittelklasse & SUV (BEV)',
+    description: 'BEV · ca. 13,9 kWh/100km · größte Reichweite der Baureihe · Listenpreis 2026: ab 46.990 €',
+    price: 46990, consumption: 13.9, insurance: 1000, maintenance: 420, depreciation: 16,
+  }),
+  bev({
+    id: 'tesla-model-y-lr-awd', label: 'Tesla Model Y Long Range AWD', group: 'Mittelklasse & SUV (BEV)',
+    description: 'BEV · ca. 14,9 kWh/100km · Allrad, Dual Motor · Listenpreis 2026: ab 52.990 €',
+    price: 52990, consumption: 14.9, insurance: 1100, maintenance: 450, depreciation: 16,
   }),
   bev({
     id: 'byd-seal-u', label: 'BYD Seal U', group: 'Mittelklasse & SUV (BEV)',
