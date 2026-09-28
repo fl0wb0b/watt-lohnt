@@ -188,14 +188,15 @@ export function estimatePvFromSize(
   hasBatteryStorage: boolean,
 ): VrmPvData {
   const annualYieldKwh = Math.max(0, kwp * specificYieldKwhPerKwp)
-  let share =
-    annualYieldKwh > 0 ? 0.3 * Math.sqrt(annualHouseholdConsumptionKwh / annualYieldKwh) : 0
+  // Negativer Verbrauch (Tippfehler im Zahlenfeld) würde die Wurzel zu NaN machen; leer (NaN) bleibt NaN.
+  const consumption = Math.max(0, annualHouseholdConsumptionKwh)
+  let share = annualYieldKwh > 0 ? 0.3 * Math.sqrt(consumption / annualYieldKwh) : 0
   if (hasBatteryStorage) share += 0.3
   share = Math.min(0.85, Math.max(0.1, share))
   return {
     annualYieldKwh: Math.round(annualYieldKwh),
     selfConsumptionShare: share,
-    annualHouseholdConsumptionKwh,
+    annualHouseholdConsumptionKwh: consumption,
     source: 'manual',
   }
 }
