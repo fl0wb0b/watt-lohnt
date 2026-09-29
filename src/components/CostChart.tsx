@@ -71,7 +71,9 @@ export function CostChart({
     const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+    // Der Container steht nur in der Diagrammansicht im DOM; nach dem Umschalten
+    // von der Tabelle zurück ist es ein neues Element, das neu beobachtet werden muss.
+  }, [showTable])
 
   const horizon = oldSeries.length - 1
   const scale = useMemo(() => {
