@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "check:calc": "tsx scripts/sanity-check.mts",
     "check:critical": "tsx scripts/critical-runs.mts",
-    "check:critical2": "tsx scripts/critical-runs-2.mts"
+    "check:critical2": "tsx scripts/critical-runs-2.mts",
+    "test": "tsx --test scripts/*.test.mts"
   },
   "dependencies": {
     "@fontsource/sedgwick-ave-display": "^5.3.0",

@@ -138,6 +138,10 @@ export function simulateSolarCharging(
             }
           }
         }
+        // Bis zur Abfahrt nicht gedeckter Bedarf (kurzes Ladefenster, PV-Überschuss reichte nicht,
+        // keine Haushaltslast → net === 0) wird trotzdem geladen – aus dem Netz. Sonst fiele er
+        // aus der Bilanz und der Solaranteil würde überschätzt.
+        if (measure) fromGrid += Math.max(0, carRemaining)
       }
     }
   }

@@ -49,8 +49,14 @@ export function ResultsView({
         />
         <StatCard
           label="Break-even"
-          value={breakEvenYear ? `nach ${breakEvenYear} Jahr${breakEvenYear === 1 ? '' : 'en'}` : 'nicht erreicht'}
-          accent={breakEvenYear ? 'positive' : 'neutral'}
+          value={
+            breakEvenYear == null
+              ? 'nicht erreicht'
+              : breakEvenYear === 0
+                ? 'sofort'
+                : `nach ${breakEvenYear} Jahr${breakEvenYear === 1 ? '' : 'en'}`
+          }
+          accent={breakEvenYear != null ? 'positive' : 'neutral'}
         />
       </div>
 

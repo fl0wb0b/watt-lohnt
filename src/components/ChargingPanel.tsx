@@ -73,7 +73,7 @@ export function ChargingPanel({ value, onChange, result, isBev }: ChargingPanelP
         <p className="rounded-md bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
           {isBev
             ? 'PV-Daten eingeben (oben), dann wird der Solaranteil simuliert.'
-            : 'Neues Fahrzeug ist kein BEV – die Ladesimulation wird nicht genutzt.'}
+            : 'Kein BEV im Vergleich – die Ladesimulation wird nicht genutzt.'}
         </p>
       )}
 

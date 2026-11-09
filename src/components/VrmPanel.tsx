@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
 import type { VrmPvData } from '../lib/types'
 import {
@@ -41,6 +41,13 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Zählt Live-Abrufe; Moduswechsel, manuelle Eingaben und geänderte Link-/Token-/Proxy-Felder
+  // machen laufende Abrufe ungültig, damit eine späte Antwort keine neueren Werte überschreibt.
+  const fetchSeq = useRef(0)
+  const cancelLiveFetch = () => {
+    fetchSeq.current++
+    setLoading(false)
+  }
 
   const parsed = parseVrmLink(link)
 
@@ -59,6 +66,7 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   ) => {
     // Heimspeicher wird nicht mehr hier pauschal geschätzt, sondern unten in der
     // Ladesimulation mit echter kWh-Kapazität gerechnet.
+    cancelLiveFetch()
     onChange(estimatePvFromSize(nextKwp, nextYield, nextConsumption, false))
   }
 
@@ -67,6 +75,7 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
       setError('Kein gültiger VRM-Link bzw. keine Installations-ID erkannt.')
       return
     }
+    const seq = ++fetchSeq.current
     setLoading(true)
     setError(null)
     try {
@@ -75,16 +84,19 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
       const data = accessToken.trim()
         ? await fetchVrmAnnualStats(parsed.installationId, accessToken.trim(), proxy)
         : await fetchVrmViaShareLink(parsed, proxy)
-      onChange(data)
+      if (seq === fetchSeq.current) onChange(data)
     } catch (e) {
-      setError(e instanceof VrmFetchError ? e.message : 'Unbekannter Fehler beim Live-Abruf.')
+      if (seq === fetchSeq.current)
+        setError(e instanceof VrmFetchError ? e.message : 'Unbekannter Fehler beim Live-Abruf.')
     } finally {
-      setLoading(false)
+      if (seq === fetchSeq.current) setLoading(false)
     }
   }
 
-  const setManual = <K extends keyof VrmPvData>(key: K, v: VrmPvData[K]) =>
+  const setManual = <K extends keyof VrmPvData>(key: K, v: VrmPvData[K]) => {
+    cancelLiveFetch()
     onChange({ ...value, [key]: v, source: 'manual' })
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -99,7 +111,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           <button
             key={m}
             type="button"
-            onClick={() => setMode(m)}
+            onClick={() => {
+              if (m !== mode) cancelLiveFetch()
+              setMode(m)
+            }}
             className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${
               mode === m
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
@@ -215,7 +230,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
               placeholder="https://vrm.victronenergy.com/installation/238127/share/..."
               className={inputClass}
               value={link}
-              onChange={(e) => setLink(e.target.value)}
+              onChange={(e) => {
+                cancelLiveFetch()
+                setLink(e.target.value)
+              }}
             />
           </label>
 
@@ -226,7 +244,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
               placeholder="https://vrm-proxy.deinname.workers.dev"
               className={`${inputClass} mt-1`}
               value={proxyUrl}
-              onChange={(e) => updateProxyUrl(e.target.value)}
+              onChange={(e) => {
+                cancelLiveFetch()
+                updateProxyUrl(e.target.value)
+              }}
             />
             <span className="mt-1 block">
               Der Abruf läuft über einen kleinen CORS-Proxy (Victron blockiert direkte
@@ -242,7 +263,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
               placeholder="VRM → Preferences → Integrations → Access tokens"
               className={`${inputClass} mt-1`}
               value={accessToken}
-              onChange={(e) => setAccessToken(e.target.value)}
+              onChange={(e) => {
+                cancelLiveFetch()
+                setAccessToken(e.target.value)
+              }}
             />
             <span className="mt-1 block">
               Nur nötig, wenn kein Share-Link vorliegt. Für den normalen Weg (Share-Link) leer

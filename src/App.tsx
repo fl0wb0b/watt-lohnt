@@ -10,6 +10,7 @@ import { VrmPanel } from './components/VrmPanel'
 import { compareCars } from './lib/calc'
 import { CAR_PRESETS, PRESET_GROUPS, getPreset, type PresetId } from './lib/presets'
 import { simulateSolarCharging } from './lib/simulate'
+import { missingInputs, type GeneralBase } from './lib/validate'
 import type {
   CarConfig,
   ChargingSimConfig,
@@ -17,8 +18,6 @@ import type {
   OldCarConfig,
   VrmPvData,
 } from './lib/types'
-
-type GeneralBase = Omit<GeneralParams, 'pvSelfConsumptionShareForEv'>
 
 // Persönliche/Markt-Werte starten LEER (NaN): Nutzer müssen ihre echten Zahlen eintragen,
 // sonst geht es nicht weiter – ein Ergebnis aus Beispielwerten wäre keine echte Entscheidung.
@@ -102,65 +101,7 @@ function App() {
 
   // --- Pflichtfeld-Prüfung: ohne echte Nutzerwerte kein Ergebnis (NaN = leer). ---
   const filled = (...vals: number[]) => vals.every((v) => !Number.isNaN(v))
-
-  const generalMissing = [
-    [general.horizonYears, 'Betrachtungszeitraum'],
-    [general.gridElectricityPricePerKwh, 'Strompreis'],
-    [general.feedInTariffPerKwh, 'Einspeisevergütung'],
-    [general.dieselPricePerLiter, 'Dieselpreis'],
-    [general.petrolPricePerLiter, 'Benzinpreis'],
-  ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
-
-  const oldMissing = [
-    [oldCar.annualKm, 'Jahresfahrleistung'],
-    [oldCar.consumptionPer100km, 'Verbrauch'],
-    [oldCar.ageYears, 'Fahrzeugalter'],
-    [oldCar.odometerKm, 'km-Stand'],
-    [oldCar.currentMarketValue, 'Marktwert'],
-    [oldCar.insurancePerYear, 'Versicherung'],
-    [oldCar.taxPerYear, 'Kfz-Steuer'],
-    [oldCar.maintenancePerYear, 'Wartung'],
-    [oldCar.expectedLifetimeKm, 'Gesamt-Laufleistung'],
-    [oldCar.replacementCost, 'Ersatzbeschaffung'],
-  ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
-
-  const isLease = newCar.financingType === 'lease'
-  const newMissing = [
-    [newCar.annualKm, 'Jahresfahrleistung'],
-    [newCar.consumptionPer100km, 'Verbrauch'],
-    [newCar.insurancePerYear, 'Versicherung'],
-    ...(isLease
-      ? ([
-          [newCar.leaseMonthlyRate, 'Leasingrate'],
-          [newCar.leaseSpecialPayment, 'Sonderzahlung'],
-          [newCar.leaseTermYears, 'Leasinglaufzeit'],
-        ] as const)
-      : ([[newCar.purchasePrice, 'Kaufpreis']] as const)),
-    ...(newCar.financingType === 'loan' || newCar.financingType === 'balloon'
-      ? ([
-          [newCar.downPayment, 'Anzahlung'],
-          [newCar.loanInterestRatePercent, 'Zinssatz'],
-          [newCar.loanTermYears, 'Kreditlaufzeit'],
-        ] as const)
-      : []),
-    ...(newCar.financingType === 'balloon'
-      ? ([[newCar.balloonPercent, 'Schlussrate']] as const)
-      : []),
-    ...(newCar.type === 'bev' ? ([[newCar.maintenancePerYear, 'Wartung']] as const) : []),
-  ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
-
-  const pvMissing =
-    newCar.type !== 'bev'
-      ? []
-      : [
-          [vrm.annualYieldKwh, 'PV-Jahresertrag'],
-          [vrm.annualHouseholdConsumptionKwh, 'Haushaltsverbrauch'],
-          [charging.earliestChargeHour, 'Ladezeit'],
-          [charging.batteryCapacityKwh, 'Speicher-kWh'],
-          [charging.maxChargePowerKw, 'Ladeleistung'],
-        ].filter(([v]) => Number.isNaN(v as number)).map(([, l]) => l as string)
-
-  const missingByStep = [generalMissing, oldMissing, newMissing, pvMissing]
+  const missingByStep = missingInputs(general, oldCar, newCar, vrm, charging)
   const allComplete = missingByStep.every((m) => m.length === 0)
 
   const evAnnualNeedKwh =
@@ -176,12 +117,27 @@ function App() {
   )
   const pvSelfConsumptionShareForEv = chargingSim?.solarShare ?? 0
 
+  // Elektrisches Bestandsfahrzeug: eigene Simulation mit eigenem Jahresbedarf.
+  const oldEvNeedKwh =
+    oldCar.type === 'bev' ? (oldCar.annualKm / 100) * oldCar.consumptionPer100km : 0
+  const oldChargingSim = useMemo(
+    () =>
+      oldCar.type === 'bev' && filled(vrm.annualYieldKwh, vrm.annualHouseholdConsumptionKwh, oldEvNeedKwh, charging.earliestChargeHour, charging.batteryCapacityKwh, charging.maxChargePowerKw)
+        ? simulateSolarCharging(vrm, oldEvNeedKwh, general.chargingLossPercent, charging)
+        : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vrm, oldEvNeedKwh, general.chargingLossPercent, charging, oldCar.type],
+  )
+
   const fullGeneral: GeneralParams = { ...general, pvSelfConsumptionShareForEv }
 
   const comparison = useMemo(
-    () => (allComplete ? compareCars(oldCar, newCar, fullGeneral, useTradeIn) : null),
+    () =>
+      allComplete
+        ? compareCars(oldCar, newCar, fullGeneral, useTradeIn, oldChargingSim?.solarShare ?? 0)
+        : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [oldCar, newCar, fullGeneral, useTradeIn, allComplete],
+    [oldCar, newCar, fullGeneral, useTradeIn, allComplete, oldChargingSim],
   )
 
   const steps = [
@@ -461,8 +417,8 @@ function App() {
           <ChargingPanel
             value={charging}
             onChange={setCharging}
-            result={chargingSim}
-            isBev={newCar.type === 'bev'}
+            result={chargingSim ?? oldChargingSim}
+            isBev={newCar.type === 'bev' || oldCar.type === 'bev'}
           />
         </Section>
       )}
