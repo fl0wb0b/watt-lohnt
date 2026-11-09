@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict'
 import { amortizationSchedule, compareCars, computeCarResult } from '../src/lib/calc'
 import { simulateSolarCharging } from '../src/lib/simulate'
 import { getPreset } from '../src/lib/presets'
@@ -111,11 +112,13 @@ const BASE_OLD_CAR: OldCarConfig = {
   const oldResult = computeCarResult({ ...oldCar, financingType: 'cash', purchasePrice: 0, subsidy: 0 }, general, 0, oldCar.currentMarketValue)
   console.log('old car year1 energy (expect 2860, no charging losses/CO2-extra for diesel except its own fuel-extra):', oldResult.years[0].energy.toFixed(0))
 
-  // New car year1 energy: needKwh=20000/100*14.5=2900, *1.10 (10% charging loss)=3190. 50% PV @0.08 + 50% grid @0.32.
-  const expectedEnergyY1 = (3190 * 0.5 * 0.08 + 3190 * 0.5 * 0.32)
+  // New car year1 energy: needKwh = 20000/100 × Preset-Verbrauch, ×1.10 (10% charging loss). 50% PV @0.08 + 50% grid @0.32.
+  const needY1 = (20000 / 100) * newCar.consumptionPer100km * 1.1
+  const expectedEnergyY1 = needY1 * 0.5 * 0.08 + needY1 * 0.5 * 0.32
   console.log(`new car year1 energy (expect ~${expectedEnergyY1.toFixed(0)}, incl. 10% Ladeverluste):`, oldResult && '')
   const newResult = computeCarResult(newCar, general, oldCar.currentMarketValue)
   console.log('  actual:', newResult.years[0].energy.toFixed(0))
+  assert.ok(Math.abs(newResult.years[0].energy - expectedEnergyY1) < 1, 'EV-Energiekosten Jahr 1 weichen ab')
 
   // THG income should reduce ongoingTotal
   console.log('new car year1 thgIncome (expect 200):', newResult.years[0].thgIncome.toFixed(0))
