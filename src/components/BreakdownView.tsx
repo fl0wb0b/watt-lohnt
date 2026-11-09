@@ -78,6 +78,11 @@ export function BreakdownView({ oldResult, newResult, oldLabel, newLabel }: Brea
       isCredit: true,
     },
     {
+      label: 'Offene Restschuld am Ende (Kredit läuft über den Zeitraum hinaus)',
+      oldValue: oldResult.outstandingBalance[oldResult.outstandingBalance.length - 1],
+      newValue: newResult.outstandingBalance[newResult.outstandingBalance.length - 1],
+    },
+    {
       label: 'Restwert am Ende (Verkaufserlös, bei Leasing 0)',
       oldValue: -oldResult.residualValueAtHorizon,
       newValue: -newResult.residualValueAtHorizon,

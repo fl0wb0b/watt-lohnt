@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
 import type { VrmPvData } from '../lib/types'
 import {
@@ -41,6 +41,13 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Zählt Live-Abrufe; Moduswechsel und manuelle Eingaben machen laufende Abrufe ungültig,
+  // damit eine späte Antwort keine neueren Werte überschreibt.
+  const fetchSeq = useRef(0)
+  const cancelLiveFetch = () => {
+    fetchSeq.current++
+    setLoading(false)
+  }
 
   const parsed = parseVrmLink(link)
 
@@ -59,6 +66,7 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
   ) => {
     // Heimspeicher wird nicht mehr hier pauschal geschätzt, sondern unten in der
     // Ladesimulation mit echter kWh-Kapazität gerechnet.
+    cancelLiveFetch()
     onChange(estimatePvFromSize(nextKwp, nextYield, nextConsumption, false))
   }
 
@@ -67,6 +75,7 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
       setError('Kein gültiger VRM-Link bzw. keine Installations-ID erkannt.')
       return
     }
+    const seq = ++fetchSeq.current
     setLoading(true)
     setError(null)
     try {
@@ -75,16 +84,19 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
       const data = accessToken.trim()
         ? await fetchVrmAnnualStats(parsed.installationId, accessToken.trim(), proxy)
         : await fetchVrmViaShareLink(parsed, proxy)
-      onChange(data)
+      if (seq === fetchSeq.current) onChange(data)
     } catch (e) {
-      setError(e instanceof VrmFetchError ? e.message : 'Unbekannter Fehler beim Live-Abruf.')
+      if (seq === fetchSeq.current)
+        setError(e instanceof VrmFetchError ? e.message : 'Unbekannter Fehler beim Live-Abruf.')
     } finally {
-      setLoading(false)
+      if (seq === fetchSeq.current) setLoading(false)
     }
   }
 
-  const setManual = <K extends keyof VrmPvData>(key: K, v: VrmPvData[K]) =>
+  const setManual = <K extends keyof VrmPvData>(key: K, v: VrmPvData[K]) => {
+    cancelLiveFetch()
     onChange({ ...value, [key]: v, source: 'manual' })
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -99,7 +111,10 @@ export function VrmPanel({ value, onChange }: VrmPanelProps) {
           <button
             key={m}
             type="button"
-            onClick={() => setMode(m)}
+            onClick={() => {
+              if (m !== mode) cancelLiveFetch()
+              setMode(m)
+            }}
             className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${
               mode === m
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'

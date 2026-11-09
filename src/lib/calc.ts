@@ -214,7 +214,8 @@ export function computeCarResult(
     const inflationFactor = (1 + inflation) ** (y - 1)
 
     let replacement = 0
-    if (lifetime && curKm >= lifetime.lifetimeKm) {
+    // Ersatz in dem Jahr, in dem die Lebensdauer erreicht wird – nicht erst im Jahr danach.
+    if (lifetime && (curKm >= lifetime.lifetimeKm || curKm + car.annualKm > lifetime.lifetimeKm)) {
       // Fahrzeug ist am Ende: gleichwertiger Gebrauchter (halbe Lebensdauer, ~6 Jahre alt).
       replacement = lifetime.replacementCost * inflationFactor
       curKm = lifetime.lifetimeKm / 2
@@ -299,12 +300,14 @@ export function compareCars(
   general: GeneralParams,
   /** Verkaufserlös des Altfahrzeugs als Anzahlung/Sondertilgung für den Neuwagen verwenden? */
   useTradeIn = true,
+  /** Solaranteil eines elektrischen Bestandsfahrzeugs (eigene Simulation, eigener Bedarf). */
+  oldPvShareForEv = general.pvSelfConsumptionShareForEv,
 ): ComparisonResult {
   // Pfad "Behalten": kein Kauf, kein Verkaufserlös vereinnahmt, Restwert bemisst sich am aktuellen
   // Marktwert – und die Lebensdauer wird ehrlich modelliert (Ersatzkauf statt ewigem Weiterfahren).
   const oldPath = computeCarResult(
     { ...oldCar, financingType: 'cash', purchasePrice: 0, subsidy: 0 },
-    general,
+    { ...general, pvSelfConsumptionShareForEv: oldPvShareForEv },
     0,
     oldCar.currentMarketValue,
     { lifetimeKm: oldCar.expectedLifetimeKm, replacementCost: oldCar.replacementCost },
@@ -317,8 +320,9 @@ export function compareCars(
   const oldCumulativeNet = netCumulativeByYear(oldPath, general)
   const newCumulativeNet = netCumulativeByYear(newPath, general)
 
+  // Ab Jahr 0: Förderung > Wallbox kann den Wechsel schon heute günstiger machen ("sofort").
   let breakEvenYear: number | null = null
-  for (let y = 1; y <= general.horizonYears; y++) {
+  for (let y = 0; y <= general.horizonYears; y++) {
     if (newCumulativeNet[y] <= oldCumulativeNet[y]) {
       breakEvenYear = y
       break
